@@ -1,0 +1,1544 @@
+---
+title: "Distribución Gamma"
+lang: es
+---
+
+```{=html}
+<style>
+main.content {
+text-align: justify}
+</style>
+```
+
+
+```{r}
+#| label: setup
+#| include: false
+
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+library(knitr)
+library(kableExtra)
+library(RColorBrewer)
+library(plotly)
+```
+
+## Función Gamma
+
+Antes de estudiar la distribución gamma, es fundamental comprender la **función gamma**, que es la base matemática de esta distribución y una generalización del factorial para los números reales.
+
+::: {#def-funcion_gamma}
+
+La **función gamma** se define por medio de la siguiente integral impropia:
+
+$$\Gamma(\alpha) = \int_{0}^{\infty} t^{\alpha -1} e^{-t} dt, \quad \alpha > 0$$
+
+Esta integral impropia converge para todos los valores reales $\alpha > 0$ y para todos los números complejos con parte real positiva.
+
+:::
+
+### Propiedades Fundamentales de la Función Gamma
+
+**1. Relación de Recurrencia**
+
+La propiedad más importante de la función gamma es:
+
+$$\Gamma(\alpha +1) = \alpha  \Gamma(\alpha)$$
+
+
+
+**2. Relación con el Factorial**
+
+Para números enteros positivos $n$:
+
+$$\Gamma(n+1) = (n)!$$
+
+
+
+**3. Valores Especiales**
+
+```{r}
+#| label: valores-especiales-gamma
+
+# Calcular algunos valores especiales de la función gamma
+valores_especiales <- data.frame(
+  `α` = c(1, 2, 3, 4, 5, 0.5, 1.5, 2.5, 3.5),
+  `Gamma(α)` = c(
+    gamma(1), gamma(2), gamma(3), gamma(4), gamma(5),
+    gamma(0.5), gamma(1.5), gamma(2.5), gamma(3.5)
+  ),
+  `Equivalencia` = c(
+    "0!", "1!", "2!", "3!", "4!",
+    "√π", "√π/2", "3√π/4", "15√π/8"
+  ),
+  check.names = FALSE
+)
+
+kable(valores_especiales,
+      caption = "Valores especiales de la función gamma", align = 'c',
+      digits = 4) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+<br>
+
+**4. Visualización de la Función Gamma**
+
+```{r}
+#| label: visualizacion-gamma
+
+# Crear gráfico de la función gamma
+x_vals <- seq(0.1, 5, length.out = 1000)
+y_vals <- gamma(x_vals)
+
+# Identificar puntos especiales
+puntos_especiales <- data.frame(
+  x = c(1, 2, 3, 4, 5, 0.5, 1.5, 2.5),
+  y = gamma(c(1, 2, 3, 4, 5, 0.5, 1.5, 2.5)),
+  etiqueta = c("Γ(1)=1", "Γ(2)=1", "Γ(3)=2", "Γ(4)=6", "Γ(5)=24", 
+               "Γ(1/2)=√π", "Γ(3/2)", "Γ(5/2)")
+)
+
+ggplot(data.frame(x = x_vals, y = y_vals), aes(x = x, y = y)) +
+  geom_line(linewidth = 1.5, color = "blue") +
+  geom_point(data = puntos_especiales, aes(x = x, y = y), 
+             color = "red", size = 3) +
+  geom_label(data = puntos_especiales[1:6,], aes(x = x, y = y, label = etiqueta),
+            vjust = -0.5, hjust = 0.5, size = 4) +
+  labs(title = "Función Gamma Γ(α)",
+       x = "α", y = "Γ(α)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  xlim(0, 5) +
+  ylim(0, 25)
+```
+
+
+
+## Descripción de la Variable Aleatoria y Definición
+
+La **distribución gamma** es una familia de distribuciones continuas extremadamente versátil que surge naturalmente en múltiples contextos estadísticos y aplicados. Su importancia radica en su capacidad para modelar una amplia variedad de fenómenos que involucran **tiempos de espera**, **sumas de variables aleatorias** y **procesos de llegada**.
+
+La distribución gamma es fundamental para modelar:
+
+- **Tiempo hasta la k-ésima falla** en sistemas con múltiples componentes
+- **Tiempo de procesamiento** de tareas que requieren múltiples etapas
+- **Modelado de lluvias** y precipitaciones acumuladas
+- **Análisis de supervivencia** con tasas de riesgo variables
+- **Distribuciones a priori** en estadística bayesiana
+- **Suma de variables exponenciales** independientes
+
+
+::: {#def-dist_gamma}
+
+Una variable aleatoria continua $X$ sigue una **distribución gamma** si tiene función de densidad de probabilidad:
+
+$$f(x) = \frac{(\lambda x)^{\alpha-1}}{\Gamma(\alpha)} \lambda e^{-\lambda x}, \quad x > 0$$
+
+donde:
+
+- $\alpha > 0$ es el **parámetro de forma** (shape parameter)
+- $\lambda > 0$ es el **parámetro de tasa** (rate parameter)
+- $\Gamma(\alpha)$ es la función gamma evaluada en $\alpha$
+
+A una variable aleatoria con distribución gamma la denotamos como $X \sim \text{gamma}(\alpha, \lambda)$
+
+:::
+
+---
+
+### Casos Especiales Importantes
+
+La distribución gamma incluye varias distribuciones conocidas como casos especiales:
+
+**1. Distribución Exponencial**
+
+Cuando $\alpha = 1$:
+$$\text{gamma}(1, \lambda) = \text{exp}(\lambda)$$
+
+
+**2. Distribución Chi-cuadrada**
+
+Cuando $\alpha = \frac{\nu}{2}$ y $\lambda = \frac{1}{2}$:
+$$\text{gamma}\left(\frac{\nu}{2}, \frac{1}{2}\right) = \chi^2(\nu)$$
+
+**3. Distribución Erlang**
+
+Cuando $\alpha$ es un entero positivo $k$:
+$$\text{gamma}(k, \lambda) = \text{Erlang}(k, \lambda)$$
+
+
+### Interpretación de los Parámetros
+
+**Parámetro de Forma ($\alpha$)**
+
+- **$\alpha < 1$**: Distribución en forma de "J" invertida, altamente sesgada
+- **$\alpha = 1$**: Distribución exponencial (decrecimiento monótono)
+- **$\alpha > 1$**: Distribución unimodal con sesgo positivo
+- **$\alpha \gg 1$**: Distribución aproximadamente simétrica (normal)
+
+**Parámetro de Tasa ($\lambda$)**
+
+- **$\lambda$ pequeño**: Distribución más dispersa, valores más grandes probables
+- **$\lambda$ grande**: Distribución más concentrada, valores más pequeños probables
+- **Efecto de escala**: $\lambda$ actúa como un factor de escala inverso
+
+```{r}
+#| label: interpretacion-parametro-alpha
+
+# Visualización del efecto de los parámetros
+x_seq <- seq(0, 8, length.out = 500)
+
+# Efecto del parámetro α (forma)
+alpha_vals <- c(0.5, 1, 2, 3, 5)
+lambda_fijo <- 1
+
+df_alpha <- data.frame()
+for (a in alpha_vals) {
+  temp <- data.frame(
+    x = x_seq,
+    y = dgamma(x_seq, shape = a, rate = lambda_fijo),
+    parametro = paste("α =", a)
+  )
+  df_alpha <- rbind(df_alpha, temp)
+}
+
+# Crear gráfico
+alpha_effect <- ggplot(df_alpha, aes(x = x, y = y, color = parametro)) +
+  geom_line(linewidth = 1.2) +
+  labs(title = "Efecto del Parámetro α en la Distribución Gamma",
+       subtitle = paste("λ =", lambda_fijo),
+       x = "x", y = "f(x)",
+       color = "Parámetro") +
+  scale_color_brewer(palette="Dark2")+
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  xlim(0, 8.1)
+
+ggplotly(alpha_effect)
+```
+
+
+```{r}
+#| label: interpretacion-parametro-lambda
+
+# Efecto del parámetro β (tasa)
+alpha_fijo <- 2
+lambda_vals <- c(0.5, 1, 1.5, 2, 3)
+
+df_lambda <- data.frame()
+for (b in lambda_vals) {
+  temp <- data.frame(
+    x = x_seq,
+    y = dgamma(x_seq, shape = alpha_fijo, rate = b),
+    parametro = paste("λ =", b)
+  )
+  df_lambda <- rbind(df_lambda, temp)
+}
+
+# Crear gráfico
+lambda_effect <- ggplot(df_lambda, aes(x = x, y = y, color = parametro)) +
+  geom_line(linewidth = 1.2) +
+  labs(title = "Efecto del Parámetro β en la Distribución Gamma",
+       subtitle = paste("α =", alpha_fijo),
+       x = "x", y = "f(x)",
+       color = "Parámetro") +
+  scale_color_brewer(palette="Dark2")+
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  xlim(0, 8.1)
+
+ggplotly(lambda_effect)
+```
+
+## Propiedades de la Función de Densidad de Probabilidad
+
+
+La función de densidad de probabilidad de la distribución gamma puede escribirse como:
+
+$$f(x) = \frac{\lambda^\alpha}{\Gamma(\alpha)} x^{\alpha-1} e^{-\lambda x}, \quad x > 0$$
+
+La cual, puede descomponerse en tres componentes principales:
+
+1. **Factor de normalización**: $\frac{\lambda^\alpha}{\Gamma(\alpha)}$
+2. **Componente de potencia**: $x^{\alpha-1}$
+3. **Componente exponencial**: $e^{-\lambda x}$
+
+
+**Análisis del Comportamiento en x = 0**
+
+El comportamiento de $f(x)$ cuando $x \to 0^+$ depende crucialmente del parámetro de forma $\alpha$:
+
+$$\lim_{x \to 0} f(x) = \lim_{x \to 0} \frac{(\lambda x)^{\alpha-1}}{\Gamma(\alpha)} \lambda e^{-\lambda x}$$
+
+- **Si α > 1**: $\lim_{x \to 0} f(x) = 0$
+- **Si α = 1**: $\lim_{x \to 0} f(x) = \frac{\lambda}{\Gamma(1)} = \lambda$
+- **Si 0 < α < 1**: $\lim_{x \to 0} f(x) = +\infty$
+
+**Moda de la Distribución**
+
+Para encontrar la moda, calculamos $f'(x) = 0$:
+
+$$f'(x) = \frac{\lambda^\alpha}{\Gamma(\alpha)} \left[(\alpha-1)x^{\alpha-2}e^{-\lambda x} - \lambda x^{\alpha-1}e^{-\lambda x}\right]$$
+
+$$= \frac{\lambda^\alpha}{\Gamma(\alpha)} x^{\alpha-2} e^{-\lambda x} \left[(\alpha-1) - \lambda x\right]$$
+
+Igualando a cero: $(\alpha-1) - \lambda x = 0$
+
+- **Si α > 1**: Moda = $\frac{\alpha-1}{\lambda}$
+- **Si α = 1**: No hay moda (distribución exponencial)
+- **Si α < 1**: Moda = 0
+
+
+
+**Visualización Detallada del Comportamiento**
+
+```{r}
+#| label: visualizacion-comportamiento
+#| warning: false
+
+lambda_fijo <- 1.5
+
+# Crear gráfico mostrando diferentes comportamientos
+x_detalle <- seq(0.01, 6, length.out = 1000)
+alpha_casos <- c(0.5, 1, 2, 4)
+colores <- c("red", "blue", "green", "purple")
+
+df_casos <- data.frame()
+for (i in seq_along(alpha_casos)) {
+  alpha_i <- alpha_casos[i]
+  temp <- data.frame(
+    x = x_detalle,
+    y = dgamma(x_detalle, shape = alpha_i, rate = lambda_fijo),
+    caso = paste("α =", alpha_i)
+  )
+  df_casos <- rbind(df_casos, temp)
+}
+
+# Agregar puntos de las modas
+df_modas <- data.frame(
+  x = c(0, NA, (2-1)/lambda_fijo, (4-1)/lambda_fijo),
+  y = c(Inf, NA, dgamma((2-1)/lambda_fijo, 2, lambda_fijo), dgamma((4-1)/lambda_fijo, 4, lambda_fijo)),
+  caso = paste("α =", alpha_casos)
+) %>% filter(!is.na(x) & is.finite(y))
+
+p1 <- ggplot(df_casos, aes(x = x, y = y, color = caso)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(data = df_modas, aes(x = x, y = y), size = 3, color = "black") +
+  geom_point(data = df_modas, aes(x = x, y = y, color = caso), size = 2) +
+  labs(title = "Comportamiento de la PDF Gamma según α",
+       subtitle = paste("λ =", lambda_fijo),
+       x = "x", y = "f(x)",
+       color = "Parámetro α") +
+  scale_color_brewer(palette="Dark2")+
+  theme_minimal() +
+  guides(color = guide_legend(position = "inside")) +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5), 
+        legend.position.inside = c(0.5, 0.7)) +
+  xlim(0, 6.1) +
+  ylim(0, 2)
+
+# Gráfico de zoom cerca del origen para α < 1
+x_zoom <- seq(0.001, 1, length.out = 1000)
+df_zoom <- data.frame(
+  x = x_zoom,
+  y = dgamma(x_zoom, shape = 0.5, rate = lambda_fijo),
+  caso = "α = 0.5"
+)
+
+p2 <- ggplot(df_zoom, aes(x = x, y = y)) +
+  geom_line(linewidth = 1.2, color = "red") +
+  labs(title = "Comportamiento cerca del origen (α = 0.5)",
+       x = "x", y = "f(x)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  xlim(0, 1) +
+  ylim(0, 5)
+
+grid.arrange(p1, p2, ncol = 2)
+```
+
+<br>
+
+**Derivada de la PDF**
+
+$$f'(x) = \frac{\lambda^\alpha}{\Gamma(\alpha)} x^{\alpha-2} e^{-\lambda x} \left[(\alpha-1) - \lambda x\right]$$
+
+Análisis del signo:
+
+- Para $x < \frac{\alpha-1}{\lambda}$: $f'(x) > 0$ (función creciente)
+- Para $x > \frac{\alpha-1}{\lambda}$: $f'(x) < 0$ (función decreciente)
+
+
+**Comportamiento Asintótico**
+
+Cuando $x \to \infty$:
+$$f(x) \sim \frac{\lambda^\alpha}{\Gamma(\alpha)} x^{\alpha-1} e^{-\lambda x} \to 0$$
+
+El decaimiento es **exponencial**, más rápido que cualquier función polinomial.
+
+
+
+
+
+## Propiedades de la Función de Distribución (CDF)
+
+::: {#def-cdf_gamma}
+
+La función de distribución acumulativa (CDF) de la distribución gamma se define como:
+
+$$F(x) = P(X \leq x) = \int_{0}^{x} \frac{(\lambda t)^{\alpha-1}}{\Gamma(\alpha)} \lambda e^{-\lambda t} dt$$
+
+Para $x > 0$, y $F(x) = 0$ para $x \leq 0$.
+
+:::
+
+### Efecto de los Parámetros en la CDF
+
+```{r}
+#| label:  visualizacion_cdf
+
+# Crear secuencia de valores x
+x_vals <- seq(0, 8, length.out = 1000)
+
+# Diferentes valores de α (forma) con β fijo
+alpha_vals <- c(0.5, 1, 2, 3, 5)
+lambda_fijo <- 1.5
+
+df_alpha_cdf <- data.frame()
+for (a in alpha_vals) {
+  temp <- data.frame(
+    x = x_vals,
+    y = pgamma(x_vals, shape = a, rate = lambda_fijo),
+    parametro = paste("α =", a),
+    tipo = "Efecto de α (λ = 1.5)"
+  )
+  df_alpha_cdf <- rbind(df_alpha_cdf, temp)
+}
+
+# Diferentes valores de β (tasa) con α fijo
+alpha_fijo <- 2
+lambda_vals <- c(0.5, 1, 1.5, 2, 3)
+
+df_lambda_cdf <- data.frame()
+for (b in lambda_vals) {
+  temp <- data.frame(
+    x = x_vals,
+    y = pgamma(x_vals, shape = alpha_fijo, rate = b),
+    parametro = paste("λ =", b),
+    tipo = "Efecto de λ (α = 2)"
+  )
+  df_lambda_cdf <- rbind(df_lambda_cdf, temp)
+}
+
+# Combinar dataframes
+df_cdf_efectos <- rbind(df_alpha_cdf, df_lambda_cdf)
+
+# Crear gráficos
+ggplot(df_cdf_efectos, aes(x = x, y = y, color = parametro)) +
+  geom_line(linewidth = 1.2) +
+  geom_hline(yintercept = c(0, 0.5, 1), linetype = "dashed", alpha = 0.5) +
+  facet_wrap(~tipo, scales = "free_x", ncol = 2) +
+  labs(title = "Función de Distribución Acumulativa - Distribución Gamma",
+       subtitle = "Efecto de los parámetros α y λ",
+       x = "x", y = "F(x) = P(X ≤ x)",
+       color = "Parámetro") +
+  scale_color_brewer(palette="Paired")+
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5)) +
+  ylim(0, 1)
+```
+
+### Comparación: PDF vs CDF
+
+```{r}
+#| label: comparacion_pdf_cdf
+
+# Comparar PDF y CDF lado a lado
+alpha_comp <- 2.5
+lambda_comp <- 1.2
+
+x_comp <- seq(0, 8, length.out = 1000)
+pdf_vals <- dgamma(x_comp, shape = alpha_comp, rate = lambda_comp)
+cdf_vals <- pgamma(x_comp, shape = alpha_comp, rate = lambda_comp)
+
+# Crear dataframe para comparación
+df_comparacion <- data.frame(
+  x = rep(x_comp, 2),
+  y = c(pdf_vals, cdf_vals),
+  tipo = rep(c("PDF: f(x)", "CDF: F(x)"), each = length(x_comp))
+)
+
+ggplot(df_comparacion, aes(x = x, y = y)) +
+  geom_line(linewidth = 1.2, color = "blue") +
+  facet_wrap(~tipo, scales = "free_y", ncol = 2) +
+  labs(title = paste("Comparación PDF vs CDF: Gamma(", alpha_comp, ",", lambda_comp, ")"),
+       x = "x", y = "Valor de la función") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+## Cuantiles de la Distribución Gamma
+
+El cuantil $x_p$ se define como el valor que satisface:
+$$F(x_p) = p$$
+
+No existe una forma cerrada para la función cuantil gamma, por lo que se calculan numéricamente.
+
+
+```{r}
+#| label: cuantiles_gamma
+
+# Mostrar cuantiles en el gráfico de CDF
+alpha_q <- 3
+lambda_q <- 1.5
+x_q <- seq(0, 6, length.out = 1000)
+cdf_q <- pgamma(x_q, shape = alpha_q, rate = lambda_q)
+
+# Cuantiles específicos
+p_vals <- c(0.25, 0.5, 0.75)
+q_vals <- qgamma(p_vals, shape = alpha_q, rate = lambda_q)
+
+# Crear puntos para los cuantiles
+df_cuantiles <- data.frame(
+  x = q_vals,
+  y = p_vals,
+  etiqueta = paste0("Q", p_vals*100, " = ", round(q_vals, 2))
+)
+
+ggplot(data.frame(x = x_q, y = cdf_q), aes(x = x, y = y)) +
+  geom_line(linewidth = 1.5, color = "blue") +
+  geom_hline(yintercept = p_vals, linetype = "dashed", color = "red", alpha = 0.7) +
+  geom_vline(xintercept = q_vals, linetype = "dashed", color = "red", alpha = 0.7) +
+  geom_point(data = df_cuantiles, aes(x = x, y = y), 
+             color = "red", size = 3) +
+  geom_label(data = df_cuantiles, aes(x = x, y = y, label = etiqueta),
+            vjust = -0.5, hjust = 0.5, size = 3.5) +
+  labs(title = paste("Cuantiles en la CDF: Gamma(", alpha_q, ",", lambda_q, ")"),
+       x = "x", y = "F(x)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ylim(0, 1)
+```
+
+## Cálculo de Probabilidades
+
+Para calcular probabilidades en intervalos, utilizamos la propiedad fundamental:
+
+$$P(a < X \leq b) = F(b) - F(a)$$
+
+
+### Visualización del Área Bajo la Curva
+
+**Probabilidad $P(1.5 < X \leq 3.5)$**
+
+```{r}
+#| label: area_bajo_curva_1
+alpha_prob <- 2.5
+lambda_prob <- 1.2
+a_val <- 1.5
+b_val <- 3.5
+
+# Crear visualización del área bajo la curva
+x_area <- seq(0, 6, length.out = 1000)
+pdf_area <- dgamma(x_area, shape = alpha_prob, rate = lambda_prob)
+
+# Identificar el área de interés
+x_intervalo <- x_area[x_area > a_val & x_area <= b_val]
+pdf_intervalo <- pdf_area[x_area > a_val & x_area <= b_val]
+prob_intervalo <- pgamma(b_val, alpha_prob, lambda_prob) - pgamma(a_val, alpha_prob, lambda_prob)
+
+# Crear el gráfico
+ggplot(data.frame(x = x_area, y = pdf_area), aes(x = x, y = y)) +
+  geom_line(linewidth = 1.5, color = "blue") +
+  geom_area(data = data.frame(x = x_intervalo, y = pdf_intervalo),
+            aes(x = x, y = y), fill = "red", alpha = 0.3) +
+  geom_vline(xintercept = c(a_val, b_val), linetype = "dashed", color = "red", linewidth = 1) +
+  annotate("text", x = mean(c(a_val, b_val)), y = max(pdf_area) * 0.3,
+           label = paste("P(", a_val, "< X ≤", b_val, ") =", round(prob_intervalo, 3)),
+           size = 5, color = "black", fontface = "bold") +
+  labs(title = "Cálculo de Probabilidades usando Área Bajo la Curva",
+       subtitle = paste("Distribución Gamma(", alpha_prob, ",", lambda_prob, ")"),
+       x = "x", y = "f(x)",
+       caption = "El área sombreada representa la probabilidad del intervalo") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+**Probabilidades Inferior y Superior**
+
+```{r areas-cola}
+# Visualizar probabilidades
+x_supinf <- seq(0, 8, length.out = 1000)
+pdf_supinf <- dgamma(x_supinf, shape = alpha_prob, rate = lambda_prob)
+
+# Punto de corte superior
+corte_superior <- 4
+
+# Áreas 
+x_inf <- x_supinf[x_supinf <= a_val]
+pdf_inf <- pdf_supinf[x_supinf <= a_val]
+
+x_sup <- x_supinf[x_supinf > corte_superior]
+pdf_sup <- pdf_supinf[x_supinf > corte_superior]
+
+# Probabilidades correspondientes
+prob_inf <- pgamma(a_val, alpha_prob, lambda_prob)
+prob_sup <- 1 - pgamma(corte_superior, alpha_prob, lambda_prob)
+
+# Crear gráfico de colas
+ggplot(data.frame(x = x_supinf, y = pdf_supinf), aes(x = x, y = y)) +
+  geom_line(linewidth = 1.5, color = "blue") +
+  geom_area(data = data.frame(x = x_inf, y = pdf_inf),
+            aes(x = x, y = y), fill = "green", alpha = 0.4) +
+  geom_area(data = data.frame(x = x_sup, y = pdf_sup),
+            aes(x = x, y = y), fill = "orange", alpha = 0.4) +
+  geom_vline(xintercept = c(a_val, corte_superior), 
+             linetype = "dashed", color = c("green", "orange"), linewidth = 1) +
+  annotate("label", x = a_val/2, y = max(pdf_supinf) * 0.5,
+           label = paste("P(X ≤", a_val, ") =", round(prob_inf, 3)),
+           size = 4, color = "green", fontface = "bold") +
+  annotate("label", x = corte_superior + 1, y = max(pdf_supinf) * 0.3,
+           label = paste("P(X >", corte_superior, ") =", round(prob_sup, 3)),
+           size = 4, color = "orange", fontface = "bold") +
+  labs(title = "Probabilidades en la Distribución Gamma",
+       subtitle = paste("Gamma(", alpha_prob, ",", lambda_prob, ")"),
+       x = "x", y = "f(x)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+
+
+
+## Medidas Descriptivas de la Distribución Gamma
+
+**Media (Esperanza)**
+
+La media de una distribución gamma $X \sim \text{gamma}(\alpha, \lambda)$ se calcula como:
+
+$$E(X) = \int_{0}^{\infty} x \cdot f(x) dx$$
+
+Sustituyendo la función de densidad:
+
+$$E(X) = \int_{0}^{\infty} x \cdot \frac{\lambda^\alpha}{\Gamma(\alpha)} x^{\alpha-1} e^{-\lambda x} dx$$
+
+$$= \frac{\lambda^\alpha}{\Gamma(\alpha)} \int_{0}^{\infty} x^\alpha e^{-\lambda x} dx$$
+
+Para resolver esta integral, utilizamos la sustitución $u = \lambda x$, donde $du = \lambda dx$ y $x = u/\lambda$:
+
+$$E(X) = \frac{\lambda^\alpha}{\Gamma(\alpha)} \int_{0}^{\infty} \left(\frac{u}{\lambda}\right)^\alpha e^{-u} \frac{du}{\lambda}$$
+
+$$= \frac{\lambda^\alpha}{\Gamma(\alpha)} \cdot \frac{1}{\lambda^{\alpha+1}} \int_{0}^{\infty} u^\alpha e^{-u} du$$
+
+$$= \frac{1}{\lambda \cdot \Gamma(\alpha)} \int_{0}^{\infty} u^\alpha e^{-u} du$$
+
+Reconocemos que $\int_{0}^{\infty} u^\alpha e^{-u} du = \Gamma(\alpha + 1)$, y usando la propiedad de recurrencia $\Gamma(\alpha + 1) = \alpha \cdot \Gamma(\alpha)$:
+
+$$E(X) = \frac{1}{\lambda \cdot \Gamma(\alpha)} \cdot \alpha \cdot \Gamma(\alpha) = \frac{\alpha}{\lambda}$$
+
+es decir,
+
+$$E(X) = \mu = \frac{\alpha}{\lambda}$$
+
+**Interpretación:**
+
+- La media es **directamente proporcional** al parámetro de forma $\alpha$
+- La media es **inversamente proporcional** al parámetro de tasa $\lambda$
+- Si $\alpha$ aumenta (manteniendo $\lambda$ fijo), la distribución se desplaza hacia la derecha
+- Si $\lambda$ aumenta (manteniendo $\alpha$ fijo), la distribución se concentra hacia valores menores
+
+```{r visualizacion-media}
+# Visualizar el efecto de los parámetros en la media
+x_vals <- seq(0, 8, length.out = 1000)
+
+# Efecto de α en la media (λ fijo)
+lambda_fijo <- 1.5
+alphas <- c(1, 2, 3, 4)
+
+df_alpha_media <- data.frame()
+for (a in alphas) {
+  media_a <- a / lambda_fijo
+  temp <- data.frame(
+    x = x_vals,
+    y = dgamma(x_vals, shape = a, rate = lambda_fijo),
+    parametro = paste("α =", a),
+    media = media_a,
+    tipo = "Efecto de α (λ = 1.5)"
+  )
+  df_alpha_media <- rbind(df_alpha_media, temp)
+}
+
+# Efecto de λ en la media (α fijo)
+alpha_fijo <- 3
+lambdas <- c(0.8, 1.2, 1.8, 2.4)
+
+df_lambda_media <- data.frame()
+for (b in lambdas) {
+  media_b <- alpha_fijo / b
+  temp <- data.frame(
+    x = x_vals,
+    y = dgamma(x_vals, shape = alpha_fijo, rate = b),
+    parametro = paste("λ =", b),
+    media = media_b,
+    tipo = "Efecto de λ (α = 3)"
+  )
+  df_lambda_media <- rbind(df_lambda_media, temp)
+}
+
+# Combinar datos
+df_medias <- rbind(df_alpha_media, df_lambda_media)
+
+# Crear gráfico
+ggplot(df_medias, aes(x = x, y = y, color = parametro)) +
+  geom_line(linewidth = 1.2) +
+  geom_vline(aes(xintercept = media, color = parametro), 
+             linetype = "dashed", alpha = 0.7) +
+  facet_wrap(~tipo, scales = "free", ncol = 2) +
+  labs(title = "Efecto de los Parámetros en la Media de la Distribución Gamma",
+       subtitle = "Las líneas verticales indican las medias teóricas",
+       x = "x", y = "f(x)",
+       color = "Parámetro") +
+  scale_color_brewer(palette="Dark2")+
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+
+**Varianza**
+
+La varianza de la distribución gamma se calculará usando la fórmula:
+
+$$\text{Var}(X) = E[X^2] - (E[X])^2$$
+
+Cálculo de $E(X^2)$
+
+Primero necesitamos calcular el segundo momento:
+
+$$E(X^2) = \int_{0}^{\infty} x^2 \cdot \frac{\lambda^\alpha}{\Gamma(\alpha)} x^{\alpha-1} e^{-\lambda x} dx$$
+
+$$= \frac{\lambda^\alpha}{\Gamma(\alpha)} \int_{0}^{\infty} x^{\alpha+1} e^{-\lambda x} dx$$
+
+Usando la misma sustitución $u = \lambda x$:
+
+$$E(X^2) = \frac{\lambda^\alpha}{\Gamma(\alpha)} \cdot \frac{1}{\lambda^{\alpha+2}} \int_{0}^{\infty} u^{\alpha+1} e^{-u} du$$
+
+$$= \frac{1}{\lambda^2 \cdot \Gamma(\alpha)} \int_{0}^{\infty} u^{\alpha+1} e^{-u} du$$
+
+$$= \frac{1}{\lambda^2 \cdot \Gamma(\alpha)} \cdot \Gamma(\alpha + 2)$$
+
+Usando $\Gamma(\alpha + 2) = (\alpha + 1) \cdot \alpha \cdot \Gamma(\alpha)$:
+
+$$E(X^2) = \frac{(\alpha + 1) \cdot \alpha \cdot \Gamma(\alpha)}{\lambda^2 \cdot \Gamma(\alpha)} = \frac{\alpha(\alpha + 1)}{\lambda^2}$$
+
+Ahora, calculamos la varianza:
+$$\text{Var}(X) = E(X^2) - E(X)^2 = \frac{\alpha(\alpha + 1)}{\lambda^2} - \left(\frac{\alpha}{\lambda}\right)^2$$
+
+$$= \frac{\alpha(\alpha + 1)}{\lambda^2} - \frac{\alpha^2}{\lambda^2} = \frac{\alpha(\alpha + 1) - \alpha^2}{\lambda^2}$$
+
+$$= \frac{\alpha^2 + \alpha - \alpha^2}{\lambda^2} = \frac{\alpha}{\lambda^2}$$
+
+es decir,
+$$\text{Var}(X) = \sigma^2 = \frac{\alpha}{\lambda^2}$$
+
+**Interpretación:**
+
+- La varianza es **proporcional** al parámetro de forma $\alpha$
+- La varianza es **inversamente proporcional** al cuadrado del parámetro de tasa $\lambda$
+- Mayor $\alpha$ implica mayor dispersión (para $\lambda$ fijo)
+- Mayor $\lambda$ implica menor dispersión (concentración hacia valores menores)
+
+
+**Desviación Estándar**
+
+La desviación estándar es la raíz cuadrada positiva de la varianza:
+
+$$\sigma = \sqrt{\text{Var}(X)} = \sqrt{\frac{\alpha}{\lambda^2}} = \frac{\sqrt{\alpha}}{\lambda}$$
+
+
+**Coeficiente de Variación**
+
+El coeficiente de variación (CV) es una medida de dispersión relativa:
+
+$$CV = \frac{\sigma}{\mu} = \frac{\frac{\sqrt{\alpha}}{\lambda}}{\frac{\alpha}{\lambda}} = \frac{\sqrt{\alpha}}{\alpha} = \frac{1}{\sqrt{\alpha}}$$
+
+**Interpretación del CV:**
+
+- El coeficiente de variación **solo depende del parámetro de forma** $\alpha$
+- Es **independiente del parámetro de tasa** $\lambda$
+- A mayor $\alpha$, menor variabilidad relativa
+- Para $\alpha = 1$ (exponencial): $CV = 1$
+- Para $\alpha \to \infty$: $CV \to 0$ (distribución muy concentrada)
+
+
+### Ejemplo Numérico Completo
+
+```{r ejemplo-completo}
+# Ejemplo con Gamma(3, 1.5)
+alpha_ej <- 3
+lambda_ej <- 1.5
+
+# Calcular todas las medidas
+media_ej <- alpha_ej / lambda_ej
+mediana_ej <- qgamma(0.5, alpha_ej, lambda_ej)
+varianza_ej <- alpha_ej / lambda_ej^2
+desv_std_ej <- sqrt(varianza_ej)
+cv_ej <- 1 / sqrt(alpha_ej)
+
+# Crear resumen numérico
+resumen_numerico <- data.frame(
+  Medida = c("Media", "Mediana", "Varianza", "Desviación Estándar", "Coeficiente de Variación"),
+  `Valor` = round(c(media_ej, mediana_ej, varianza_ej, desv_std_ej, cv_ej), 4),
+  `Interpretación` = c(
+    paste("En promedio, X =", round(media_ej, 2)),
+    paste("50% de valores ≤", round(mediana_ej, 2)),
+    paste("Variabilidad =", round(desv_std_ej, 2), "²"),
+    paste("Dispersión típica =", round(desv_std_ej, 2)),
+    paste("Variabilidad relativa =", round(cv_ej*100, 1), "%")
+  ),
+  check.names = FALSE
+)
+
+kable(resumen_numerico,
+      caption = paste("Ejemplo numérico: Gamma(", alpha_ej, ",", lambda_ej, ")")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+
+# Visualización del ejemplo
+x_ejemplo <- seq(0, 6, length.out = 1000)
+pdf_ejemplo <- dgamma(x_ejemplo, alpha_ej, lambda_ej)
+
+ggplot(data.frame(x = x_ejemplo, y = pdf_ejemplo), aes(x = x, y = y)) +
+  geom_line(linewidth = 1.5, color = "blue") +
+  geom_vline(xintercept = media_ej, color = "red", linewidth = 1.2, linetype = "solid") +
+  geom_vline(xintercept = mediana_ej, color = "green", linewidth = 1.2, linetype = "dashed") +
+  geom_vline(xintercept = c(media_ej - desv_std_ej, media_ej + desv_std_ej), 
+             color = "orange", linewidth = 1, linetype = "dotted") +
+  annotate("text", x = media_ej + 0.2, y = max(pdf_ejemplo) * 0.8,
+           label = paste("Media =", round(media_ej, 2)), color = "red", size = 4) +
+  annotate("text", x = mediana_ej + 0.2, y = max(pdf_ejemplo) * 0.6,
+           label = paste("Mediana =", round(mediana_ej, 2)), color = "green", size = 4) +
+  annotate("text", x = media_ej + desv_std_ej + 0.2, y = max(pdf_ejemplo) * 0.4,
+           label = paste("μ ± σ"), color = "orange", size = 4) +
+  labs(title = paste("Medidas Descriptivas: Gamma(", alpha_ej, ",", lambda_ej, ")"),
+       x = "x", y = "f(x)",
+       caption = "Línea roja: Media | Línea verde: Mediana | Líneas naranjas: μ ± σ") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+
+
+## Simulación y Comparación con Valores Teóricos
+
+En esta sección generaremos muestras aleatorias de la distribución gamma y compararemos los estadísticos muestrales con los parámetros teóricos conocidos.
+
+**Parámetros de la Distribución**
+
+Consideremos una distribución $\text{gamma}(\alpha = 3, \lambda = 1.5)$ para nuestras simulaciones:
+
+```{r parametros-simulacion}
+# Parámetros de la distribución gamma
+alpha_sim <- 3
+lambda_sim <- 1.5
+
+# Parámetros teóricos
+media_teorica <- alpha_sim / lambda_sim
+varianza_teorica <- alpha_sim / lambda_sim^2
+desv_std_teorica <- sqrt(varianza_teorica)
+mediana_teorica <- qgamma(0.5, shape = alpha_sim, rate = lambda_sim)
+cv_teorico <- 1 / sqrt(alpha_sim)
+
+cat("=== PARÁMETROS TEÓRICOS ===\n")
+cat("Distribución: Gamma(α =", alpha_sim, ", λ =", lambda_sim, ")\n")
+cat("Media teórica:", round(media_teorica, 4), "\n")
+cat("Varianza teórica:", round(varianza_teorica, 4), "\n")
+cat("Desviación estándar teórica:", round(desv_std_teorica, 4), "\n")
+cat("Mediana teórica:", round(mediana_teorica, 4), "\n")
+cat("Coeficiente de variación teórico:", round(cv_teorico, 4), "\n")
+```
+
+**Simulación con diferentes tamaños de muestra:** Convergencia de estadísticos muestrales
+
+```{r}
+# Diferentes tamaños de muestra
+tamaños_muestra <- c(50, 100, 500, 1000, 5000, 10000)
+
+# Función para calcular estadísticos muestrales
+calcular_estadisticos_gamma <- function(n, alpha, lambda) {
+  muestra <- rgamma(n, shape = alpha, rate = lambda)
+  
+  return(data.frame(
+    n = n,
+    media_muestral = mean(muestra),
+    varianza_muestral = var(muestra),
+    desv_std_muestral = sd(muestra),
+    mediana_muestral = median(muestra),
+    cv_muestral = sd(muestra) / mean(muestra),
+    min_muestral = min(muestra),
+    max_muestral = max(muestra),
+    q1_muestral = quantile(muestra, 0.25),
+    q3_muestral = quantile(muestra, 0.75)
+  ))
+}
+
+# Realizar simulaciones
+resultados_simulacion <- do.call(rbind, lapply(tamaños_muestra, calcular_estadisticos_gamma, 
+                                              alpha = alpha_sim, lambda = lambda_sim))
+
+# Agregar valores teóricos y errores
+resultados_simulacion$media_teorica <- media_teorica
+resultados_simulacion$varianza_teorica <- varianza_teorica
+resultados_simulacion$desv_std_teorica <- desv_std_teorica
+resultados_simulacion$mediana_teorica <- mediana_teorica
+resultados_simulacion$cv_teorico <- cv_teorico
+
+# Calcular errores relativos
+resultados_simulacion$error_media <- abs(resultados_simulacion$media_muestral - media_teorica) / media_teorica * 100
+resultados_simulacion$error_varianza <- abs(resultados_simulacion$varianza_muestral - varianza_teorica) / varianza_teorica * 100
+resultados_simulacion$error_mediana <- abs(resultados_simulacion$mediana_muestral - mediana_teorica) / mediana_teorica * 100
+
+# Mostrar tabla de resultados
+tabla_resultados <- resultados_simulacion[, c("n", "media_muestral", "media_teorica", "error_media",
+                                              "varianza_muestral", "varianza_teorica", "error_varianza",
+                                              "mediana_muestral", "mediana_teorica", "error_mediana")]
+
+kable(tabla_resultados,
+      caption = "Convergencia de estadísticos muestrales hacia valores teóricos",
+      digits = 4,
+      col.names = c("n", "Media Obs.", "Media Teór.", "Error %",
+                    "Var. Obs.", "Var. Teór.", "Error %",
+                    "Med. Obs.", "Med. Teór.", "Error %")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) 
+```
+
+<br>
+
+**Visualización de la Convergencia (Ley de Grandes Números)**
+
+```{r}
+#| warning: false
+
+# Generar una secuencia larga para observar convergencia
+n_total <- 20000
+muestra_larga <- rgamma(n_total, shape = alpha_sim, rate = lambda_sim)
+
+# Calcular estadísticos acumulados
+indices <- 1:n_total
+medias_acumuladas <- cumsum(muestra_larga) / indices
+varianzas_acumuladas <- sapply(indices, function(i) var(muestra_larga[1:i]))
+
+# Crear dataframe para gráficos
+df_convergencia <- data.frame(
+  n = indices,
+  media_acumulada = medias_acumuladas,
+  varianza_acumulada = varianzas_acumuladas
+)
+
+# Gráfico de convergencia de la media
+p1 <- ggplot(df_convergencia, aes(x = n)) +
+  geom_line(aes(y = media_acumulada), color = "blue", alpha = 0.8) +
+  geom_hline(yintercept = media_teorica, color = "red", linetype = "dashed", linewidth = 1) +
+  labs(title = "Convergencia de la Media Muestral",
+       x = "Tamaño de muestra (n)",
+       y = "Media acumulada",
+       caption = paste("Línea roja: Media teórica =", round(media_teorica, 3))) +
+  theme_minimal() +
+  ylim(media_teorica - 0.3, media_teorica + 0.3)
+
+# Gráfico de convergencia de la varianza
+p2 <- ggplot(df_convergencia, aes(x = n)) +
+  geom_line(aes(y = varianza_acumulada), color = "green", alpha = 0.8) +
+  geom_hline(yintercept = varianza_teorica, color = "red", linetype = "dashed", linewidth = 1) +
+  labs(title = "Convergencia de la Varianza Muestral",
+       x = "Tamaño de muestra (n)",
+       y = "Varianza acumulada",
+       caption = paste("Línea roja: Varianza teórica =", round(varianza_teorica, 3))) +
+  theme_minimal() +
+  ylim(varianza_teorica - 0.5, varianza_teorica + 0.5)
+
+# Mostrar ambos gráficos
+grid.arrange(p1, p2, ncol = 2,
+             top = "Ley de Grandes Números - Distribución Gamma")
+```
+
+**Comparación Histograma vs Densidad Teórica**
+
+```{r}
+#| warning: false
+
+# Generar muestra grande para comparación visual
+muestra_grande <- rgamma(8000, shape = alpha_sim, rate = lambda_sim)
+
+# Crear histograma con densidad teórica superpuesta
+ggplot(data.frame(x = muestra_grande), aes(x = x)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 50, 
+                 fill = "lightblue", color = "black", alpha = 0.7) +
+  stat_function(fun = dgamma, args = list(shape = alpha_sim, rate = lambda_sim),
+                color = "red", linewidth = 2) +
+  geom_vline(xintercept = media_teorica, color = "red", linetype = "dashed", linewidth = 1) +
+  geom_vline(xintercept = median(muestra_grande), color = "blue", linetype = "dotted", linewidth = 1) +
+  labs(title = "Histograma de Muestra vs Densidad Teórica",
+       subtitle = paste("8000 observaciones de Gamma(", alpha_sim, ",", lambda_sim, ")"),
+       x = "Valores",
+       y = "Densidad",
+       caption = "Curva roja: Densidad teórica | Línea roja: Media teórica | Línea azul: Mediana muestral") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5)) +
+  xlim(0, 8)
+```
+
+
+## Ejercicios Propuestos
+
+::: {#exr-TCL_gamma}
+
+### Simulación y Teorema Central del Límite
+
+   - Genera 1000 muestras de tamaños $n= 5, 10, 20, 30, 50, 100$ de una distribución $\text{gamma}(\alpha = 2.5, \lambda = 1.8)$.
+   - Calcula la media muestral para cada muestra y compárala con la media teórica.
+   - Calcula la varianza de las medias muestrales y compárala con la varianza teórica dividida por $n$.
+   - Grafica los histogramas de las medias muestrales y superpone la distribución normal teórica según el TCL.
+
+
+:::
+
+
+::: {#exr-suma_exponenciales}
+
+**Proposición** Sean $X_1, \dots, X_n$ variables aleatorias independientes e idénticamente distribuidas con distribución exponencial $\text{exp}(\lambda)$. Entonces, la suma $Y = \sum_{i=1}^{n} X_i$ sigue una distribución gamma $\text{gamma}(n, \lambda)$.
+
+   - Simula 1000 sumas de $n=5$ variables aleatorias $\text{exp}(\lambda = 1.5)$.
+   - Grafica el histograma de las sumas y superpone la densidad teórica de $\text{gamma}(5, 1.5)$.
+   - Repite el ejercicio para $n=10$ y $n=20$ y observa cómo cambia la forma de la distribución.
+
+
+```{r}
+
+# EJERCICIOS DE SIMULACIÓN - DISTRIBUCIONES GAMMA Y EXPONENCIAL
+
+# ============================================================================
+# EJERCICIO 1: Simulación y Teorema Central del Límite para distribución Gamma
+# ============================================================================
+
+simulacion_TCL_gamma <- function() {
+  cat("======================================================================\n")
+  cat("EJERCICIO 1: TCL PARA DISTRIBUCIÓN GAMMA(α=2.5, λ=1.8)\n")
+  cat("======================================================================\n")
+  
+  # Parámetros de la distribución gamma
+  alpha <- 2.5
+  lambda <- 1.8
+  
+  # Media y varianza teóricas
+  media_teorica <- alpha / lambda
+  varianza_teorica <- alpha / (lambda^2)
+  
+  cat("Parámetros de la distribución Gamma:\n")
+  cat("  Forma (α):", alpha, "\n")
+  cat("  Tasa (λ):", lambda, "\n")
+  cat("  Media teórica (μ = α/λ):", round(media_teorica, 4), "\n")
+  cat("  Varianza teórica (σ² = α/λ²):", round(varianza_teorica, 4), "\n\n")
+  
+  # Tamaños de muestra
+  tamanos_muestra <- c(5, 10, 20, 30, 50, 100)
+  num_muestras <- 1000
+  
+  # Listas para almacenar resultados
+  medias_muestrales <- list()
+  varianzas_medias <- numeric(length(tamanos_muestra))
+  
+  # Configurar espacio para gráficos
+  par(mfrow = c(3, 2))
+  
+  for (i in seq_along(tamanos_muestra)) {
+    n <- tamanos_muestra[i]
+    medias <- numeric(num_muestras)
+    
+    cat("Procesando n =", n, "...\n")
+    
+    # Generar 1000 muestras de tamaño n y calcular sus medias
+    for (j in 1:num_muestras) {
+      muestra <- rgamma(n, shape = alpha, rate = lambda)
+      medias[j] <- mean(muestra)
+    }
+    
+    # Almacenar resultados
+    medias_muestrales[[i]] <- medias
+    varianzas_medias[i] <- var(medias)
+    
+    # Parámetros según el TCL
+    media_medias_teorica <- media_teorica
+    varianza_medias_teorica <- varianza_teorica / n
+    sd_medias_teorica <- sqrt(varianza_medias_teorica)
+    
+    # Estadísticas muestrales
+    media_medias_muestral <- mean(medias)
+    varianza_medias_muestral <- var(medias)
+    
+    # Crear histograma
+    hist(medias, breaks = 30, freq = FALSE, 
+         col = "lightblue", border = "white",
+         main = paste("Distribución de Medias - n =", n),
+         xlab = "Media muestral", ylab = "Densidad",
+         xlim = c(media_teorica - 3*sd_medias_teorica, 
+                  media_teorica + 3*sd_medias_teorica))
+    
+    # Superponer curva normal teórica según TCL
+    x <- seq(media_teorica - 3*sd_medias_teorica, 
+             media_teorica + 3*sd_medias_teorica, 
+             length.out = 1000)
+    y <- dnorm(x, mean = media_medias_teorica, sd = sd_medias_teorica)
+    lines(x, y, col = "red", lwd = 2)
+    
+    # Línea para la media teórica
+    abline(v = media_medias_teorica, col = "darkgreen", lwd = 2, lty = 2)
+    
+    # Línea para la media muestral
+    abline(v = media_medias_muestral, col = "blue", lwd = 2, lty = 3)
+    
+    # Calcular medidas de calidad de la aproximación
+    sesgo <- moments::skewness(medias)
+    curtosis <- moments::kurtosis(medias)
+    
+    # Agregar información al gráfico
+    legend("topright", 
+           legend = c(paste("Media muestral:", round(media_medias_muestral, 4)),
+                      paste("Varianza muestral:", round(varianza_medias_muestral, 4)),
+                      paste("Teórico: N(", round(media_medias_teorica, 2), ", ", 
+                            round(varianza_medias_teorica, 4), ")", sep = ""),
+                      paste("Sesgo:", round(sesgo, 3)),
+                      paste("Curtosis:", round(curtosis, 3))),
+           bg = "white", cex = 0.7)
+    
+    # Imprimir resultados en consola
+    cat("  Media de medias muestrales:", round(media_medias_muestral, 4), "\n")
+    cat("  Varianza de medias muestrales:", round(varianza_medias_muestral, 4), "\n")
+    cat("  Varianza teórica (σ²/n):", round(varianza_medias_teorica, 4), "\n")
+    cat("  Diferencia en varianzas:", round(varianza_medias_muestral - varianza_medias_teorica, 4), "\n")
+    cat("  Error relativo:", round(abs(varianza_medias_muestral - varianza_medias_teorica) / varianza_medias_teorica * 100, 2), "%\n\n")
+  }
+  
+  par(mfrow = c(1, 1))
+  
+  # Gráfico adicional: Convergencia de varianzas
+  dev.new()
+  plot(tamanos_muestra, varianzas_medias, type = "b", pch = 19, col = "blue", lwd = 2,
+       main = "Convergencia de la Varianza de Medias Muestrales",
+       xlab = "Tamaño de muestra (n)", ylab = "Varianza de medias muestrales",
+       ylim = c(0, max(varianzas_medias) * 1.1),
+       log = "x")
+  
+  # Curva teórica: σ²/n
+  n_teorico <- seq(min(tamanos_muestra), max(tamanos_muestra), length.out = 100)
+  varianza_teorica_curva <- varianza_teorica / n_teorico
+  lines(n_teorico, varianza_teorica_curva, col = "red", lwd = 2, lty = 2)
+  
+  # Banda de confianza (aproximada)
+  # Para la varianza muestral: Var(S²) ≈ 2σ⁴/(n-1)
+  # Pero para la varianza de medias: Var(Var(𝑋̄)) ≈ 2(σ²/n)²/(m-1) donde m es número de muestras
+  error_var <- sqrt(2 * (varianza_teorica/n_teorico)^2 / (num_muestras - 1))
+  lines(n_teorico, varianza_teorica_curva + 2*error_var, col = "orange", lwd = 1, lty = 3)
+  lines(n_teorico, varianza_teorica_curva - 2*error_var, col = "orange", lwd = 1, lty = 3)
+  
+  legend("topright", 
+         legend = c("Varianza muestral", "Teórica (σ²/n)", "Banda de ±2SE"),
+         col = c("blue", "red", "orange"), lwd = c(2, 2, 1), lty = c(1, 2, 3))
+  grid()
+  
+  # Gráfico adicional: Q-Q plots para los tamaños extremos
+  par(mfrow = c(2, 2))
+  
+  indices_extremos <- c(1, 3, 5, 6)  # n = 5, 20, 50, 100
+  for (idx in indices_extremos) {
+    n <- tamanos_muestra[idx]
+    medias <- medias_muestrales[[idx]]
+    
+    # Estandarizar
+    medias_estandarizadas <- (medias - media_teorica) / sqrt(varianza_teorica/n)
+    
+    qqnorm(medias_estandarizadas, 
+           main = paste("Q-Q Plot Medias Estandarizadas - n =", n),
+           pch = 19, cex = 0.5, col = "blue")
+    qqline(medias_estandarizadas, col = "red", lwd = 2)
+    
+    # Prueba de normalidad
+    if (n >= 10) {  # Shapiro-Wilk requiere al menos 3 observaciones, pero es más confiable con más
+      shapiro_test <- shapiro.test(medias_estandarizadas)
+      mtext(paste("Shapiro-Wilk p =", round(shapiro_test$p.value, 4)), 
+            side = 3, line = 0.5, cex = 0.8)
+    }
+  }
+  
+  par(mfrow = c(1, 1))
+  
+  # Resumen estadístico
+  cat("\n======================================================================\n")
+  cat("RESUMEN DEL EJERCICIO 1\n")
+  cat("======================================================================\n")
+  
+  resumen <- data.frame(
+    n = tamanos_muestra,
+    Media_Medias = sapply(medias_muestrales, mean),
+    Media_Teorica = rep(media_teorica, length(tamanos_muestra)),
+    Dif_Media = sapply(medias_muestrales, mean) - media_teorica,
+    Varianza_Medias = varianzas_medias,
+    Varianza_Teorica = varianza_teorica / tamanos_muestra,
+    Dif_Varianza = varianzas_medias - (varianza_teorica / tamanos_muestra),
+    Error_Rel_Var = round(abs(varianzas_medias - (varianza_teorica / tamanos_muestra)) / 
+                           (varianza_teorica / tamanos_muestra) * 100, 2)
+  )
+  
+  cat("Tabla resumen:\n")
+  print(resumen, row.names = FALSE)
+  
+  cat("\nConclusiones:\n")
+  cat("1. La media de las medias muestrales converge a la media poblacional\n")
+  cat("2. La varianza de las medias muestrales converge a σ²/n\n")
+  cat("3. Para n ≥ 30, la distribución de medias es aproximadamente normal\n")
+  cat("4. El error relativo disminuye conforme aumenta n\n")
+  
+  return(resumen)
+}
+
+# Ejecutar el ejercicio 1
+resultados_TCL <- simulacion_TCL_gamma()
+
+# ============================================================================
+# EJERCICIO 2: Suma de variables exponenciales ~ Gamma
+# ============================================================================
+
+simulacion_suma_exponenciales <- function() {
+  cat("\n\n======================================================================\n")
+  cat("EJERCICIO 2: SUMA DE VARIABLES EXPONENCIALES ~ GAMMA\n")
+  cat("======================================================================\n")
+  
+  # Parámetro de la distribución exponencial
+  lambda <- 1.5
+  
+  # Valores de n a simular
+  n_valores <- c(5, 10, 20)
+  num_simulaciones <- 1000
+  
+  # Media y varianza de una exponencial
+  media_exp <- 1/lambda
+  varianza_exp <- 1/(lambda^2)
+  
+  cat("Parámetros de la distribución Exponencial:\n")
+  cat("  Tasa (λ):", lambda, "\n")
+  cat("  Media (1/λ):", round(media_exp, 4), "\n")
+  cat("  Varianza (1/λ²):", round(varianza_exp, 4), "\n\n")
+  
+  cat("Propiedad a verificar:\n")
+  cat("  Si X_i ~ Exp(λ) i.i.d., entonces ΣX_i ~ Gamma(n, λ)\n")
+  cat("  Media teórica de Gamma(n, λ): n/λ =", n_valores[1]/lambda, "para n =", n_valores[1], "\n")
+  cat("  Varianza teórica de Gamma(n, λ): n/λ² =", n_valores[1]/(lambda^2), "para n =", n_valores[1], "\n\n")
+  
+  # Configurar espacio para gráficos
+  par(mfrow = c(3, 3))
+  
+  for (i in seq_along(n_valores)) {
+    n <- n_valores[i]
+    
+    cat("Simulando n =", n, "variables exponenciales...\n")
+    
+    # Parámetros teóricos de la Gamma(n, λ)
+    alpha_teorico <- n  # Forma
+    beta_teorico <- lambda  # Tasa
+    
+    media_gamma_teorica <- alpha_teorico / beta_teorico
+    varianza_gamma_teorica <- alpha_teorico / (beta_teorico^2)
+    
+    # Vectores para almacenar resultados
+    sumas_directas <- numeric(num_simulaciones)  # Sumando exponenciales
+    valores_gamma <- numeric(num_simulaciones)   # Generando directamente Gamma
+    
+    # Generar simulaciones
+    for (j in 1:num_simulaciones) {
+      # Método 1: Sumar n variables exponenciales
+      exponenciales <- rexp(n, rate = lambda)
+      sumas_directas[j] <- sum(exponenciales)
+      
+      # Método 2: Generar directamente de Gamma(n, λ)
+      valores_gamma[j] <- rgamma(1, shape = n, rate = lambda)
+    }
+    
+    # Gráfico 1: Histograma de sumas vs densidad Gamma teórica
+    hist(sumas_directas, breaks = 30, freq = FALSE, 
+         col = "lightblue", border = "white",
+         main = paste("Suma de", n, "Exp(", lambda, ")", sep = ""),
+         xlab = "Valor de la suma", ylab = "Densidad",
+         xlim = c(0, max(sumas_directas) * 1.1))
+    
+    # Densidad teórica Gamma
+    x <- seq(0, max(sumas_directas), length.out = 1000)
+    y <- dgamma(x, shape = n, rate = lambda)
+    lines(x, y, col = "red", lwd = 2)
+    
+    # Media muestral y teórica
+    media_sumas <- mean(sumas_directas)
+    abline(v = media_sumas, col = "blue", lwd = 2, lty = 2)
+    abline(v = media_gamma_teorica, col = "darkgreen", lwd = 2, lty = 3)
+    
+    legend("topright", 
+           legend = c("Densidad muestral", "Densidad Gamma teórica",
+                      paste("Media muestral:", round(media_sumas, 3)),
+                      paste("Media teórica:", round(media_gamma_teorica, 3))),
+           col = c("lightblue", "red", "blue", "darkgreen"),
+           lwd = c(NA, 2, 2, 2), lty = c(NA, 1, 2, 3),
+           fill = c("lightblue", NA, NA, NA),
+           border = c("white", NA, NA, NA),
+           cex = 0.7)
+    
+    # Gráfico 2: Q-Q plot sumas vs Gamma teórica
+    qqplot(qgamma(ppoints(num_simulaciones), shape = n, rate = lambda), 
+           sumas_directas,
+           main = paste("Q-Q Plot: Suma vs Gamma(", n, ",", lambda, ")", sep = ""),
+           xlab = "Cuantiles teóricos Gamma", 
+           ylab = "Cuantiles muestrales suma",
+           pch = 19, cex = 0.5, col = "blue")
+    abline(0, 1, col = "red", lwd = 2)
+    
+    # Gráfico 3: Comparación directa Gamma vs Suma
+    hist(valores_gamma, breaks = 30, freq = FALSE,
+         col = rgb(0, 0.5, 0, 0.5), border = "white",
+         main = paste("Comparación: Gamma vs Suma (n=", n, ")", sep = ""),
+         xlab = "Valor", ylab = "Densidad",
+         xlim = range(c(sumas_directas, valores_gamma)))
+    
+    hist(sumas_directas, breaks = 30, freq = FALSE,
+         col = rgb(0, 0, 1, 0.5), border = "white", add = TRUE)
+    
+    # Densidad teórica
+    lines(x, y, col = "red", lwd = 3)
+    
+    legend("topright", 
+           legend = c("Gamma directa", "Suma de exponenciales", "Densidad teórica"),
+           fill = c(rgb(0, 0.5, 0, 0.5), rgb(0, 0, 1, 0.5), NA),
+           border = c("white", "white", NA),
+           col = c(NA, NA, "red"), lwd = c(NA, NA, 3),
+           cex = 0.7)
+    
+    # Estadísticas comparativas
+    cat("  Resultados para n =", n, ":\n")
+    cat("    Media de sumas:", round(mean(sumas_directas), 4), "\n")
+    cat("    Media teórica Gamma:", round(media_gamma_teorica, 4), "\n")
+    cat("    Varianza de sumas:", round(var(sumas_directas), 4), "\n")
+    cat("    Varianza teórica Gamma:", round(varianza_gamma_teorica, 4), "\n")
+    
+    # Prueba de Kolmogorov-Smirnov
+    ks_test <- ks.test(sumas_directas, valores_gamma)
+    cat("    Prueba KS p-value:", round(ks_test$p.value, 4), "\n")
+    
+    if (ks_test$p.value > 0.05) {
+      cat("    Conclusión: No se rechaza que sean la misma distribución ✓\n")
+    } else {
+      cat("    Conclusión: Se rechaza que sean la misma distribución ✗\n")
+    }
+    cat("\n")
+  }
+  
+  par(mfrow = c(1, 1))
+  
+  # Gráfico adicional: Evolución de la forma con n
+  dev.new()
+  
+  # Preparar datos para múltiples n
+  n_extra <- c(1, 2, 5, 10, 20, 30)
+  x_range <- seq(0, 30, length.out = 1000)
+  
+  plot(x_range, dgamma(x_range, shape = n_extra[1], rate = lambda), 
+       type = "l", col = 1, lwd = 2,
+       main = "Evolución de la forma de Gamma(n, λ) con n",
+       xlab = "x", ylab = "Densidad Gamma(n, λ)",
+       ylim = c(0, 0.6))
+  
+  # Colores para diferentes n
+  colores <- rainbow(length(n_extra))
+  
+  for (i in 2:length(n_extra)) {
+    n_temp <- n_extra[i]
+    lines(x_range, dgamma(x_range, shape = n_temp, rate = lambda), 
+          col = colores[i], lwd = 2)
+  }
+  
+  legend("topright", 
+         legend = paste("n =", n_extra),
+         col = colores, lwd = 2, cex = 0.8)
+  
+  # Teorema Central del Límite aplicado a la suma
+  cat("\n======================================================================\n")
+  cat("OBSERVACIÓN SOBRE EL TCL PARA SUMAS DE EXPONENCIALES\n")
+  cat("======================================================================\n")
+  
+  cat("Para la suma de n variables exponenciales i.i.d.:\n")
+  cat("  Y = ΣX_i ~ Gamma(n, λ)\n")
+  cat("  Media: E[Y] = n/λ\n")
+  cat("  Varianza: Var(Y) = n/λ²\n")
+  cat("\nSegún el TCL, para n grande:\n")
+  cat("  (Y - n/λ) / sqrt(n/λ²) ≈ N(0, 1)\n")
+  cat("  O equivalentemente: Y ≈ N(n/λ, n/λ²)\n")
+  
+  # Demostración con n = 30
+  n_grande <- 30
+  sumas_grandes <- numeric(1000)
+  
+  for (j in 1:1000) {
+    exponenciales <- rexp(n_grande, rate = lambda)
+    sumas_grandes[j] <- sum(exponenciales)
+  }
+  
+  # Estandarizar
+  sumas_estandarizadas <- (sumas_grandes - n_grande/lambda) / sqrt(n_grande/(lambda^2))
+  
+  dev.new()
+  par(mfrow = c(1, 2))
+  
+  # Histograma de sumas estandarizadas vs N(0,1)
+  hist(sumas_estandarizadas, breaks = 30, freq = FALSE,
+       col = "lightblue", border = "white",
+       main = paste("Sumas Estandarizadas (n=", n_grande, ")", sep = ""),
+       xlab = "Suma estandarizada", ylab = "Densidad",
+       xlim = c(-4, 4))
+  
+  x_norm <- seq(-4, 4, length.out = 1000)
+  y_norm <- dnorm(x_norm)
+  lines(x_norm, y_norm, col = "red", lwd = 2)
+  
+  # Q-Q plot
+  qqnorm(sumas_estandarizadas, 
+         main = paste("Q-Q Plot Sumas Estandarizadas (n=", n_grande, ")", sep = ""),
+         pch = 19, cex = 0.5, col = "blue")
+  qqline(sumas_estandarizadas, col = "red", lwd = 2)
+  
+  # Prueba de normalidad
+  shapiro_test <- shapiro.test(sumas_estandarizadas)
+  mtext(paste("Shapiro-Wilk p =", round(shapiro_test$p.value, 4)),
+        side = 3, line = 0.5, cex = 0.8)
+  
+  par(mfrow = c(1, 1))
+  
+  cat("\nPara n =", n_grande, ":\n")
+  cat("  Sesgo de sumas estandarizadas:", round(moments::skewness(sumas_estandarizadas), 4), "\n")
+  cat("  Curtosis de sumas estandarizadas:", round(moments::kurtosis(sumas_estandarizadas), 4), "\n")
+  cat("  (Normal: sesgo=0, curtosis=3)\n")
+  
+  if (shapiro_test$p.value > 0.05) {
+    cat("  Conclusión: La aproximación normal es adecuada para n =", n_grande, "✓\n")
+  } else {
+    cat("  Conclusión: La aproximación normal NO es adecuada para n =", n_grande, "✗\n")
+  }
+  
+  cat("\n======================================================================\n")
+  cat("RESUMEN DEL EJERCICIO 2\n")
+  cat("======================================================================\n")
+  
+  cat("Se ha verificado la propiedad:\n")
+  cat("  Si X_i ~ Exp(λ) i.i.d., entonces Σ_{i=1}^n X_i ~ Gamma(n, λ)\n\n")
+  
+  cat("Observaciones:\n")
+  cat("1. Para n pequeño, la distribución Gamma es asimétrica\n")
+  cat("2. Para n grande, la distribución Gamma se aproxima a una normal\n")
+  cat("3. La media y varianza muestrales coinciden con las teóricas\n")
+  cat("4. La propiedad se mantiene para diferentes valores de n\n")
+  
+  cat("\nAplicaciones prácticas:\n")
+  cat("• Tiempo hasta n eventos en un proceso de Poisson\n")
+  cat("• Suma de tiempos de vida de componentes exponenciales\n")
+  cat("• Modelado de tiempos de espera acumulados\n")
+}
+
+# Ejecutar el ejercicio 2
+simulacion_suma_exponenciales()
+
+# ============================================================================
+# FUNCIÓN ADICIONAL: Comparación visual entre distribuciones
+# ============================================================================
+
+comparacion_distribuciones <- function() {
+  cat("\n\n======================================================================\n")
+  cat("COMPARACIÓN VISUAL ENTRE DISTRIBUCIONES\n")
+  cat("======================================================================\n")
+  
+  lambda <- 1.5
+  
+  # Crear gráfico comparativo
+  x <- seq(0, 10, length.out = 1000)
+  
+  # Distribuciones para diferentes n
+  n_vals <- c(1, 2, 5, 10)
+  colores <- c("red", "blue", "green", "purple")
+  
+  plot(x, dexp(x, rate = lambda), type = "l", col = "black", lwd = 3,
+       main = "Comparación: Exponencial vs Gamma (suma de exponenciales)",
+       xlab = "x", ylab = "Densidad",
+       ylim = c(0, 1.0))
+  
+  for (i in seq_along(n_vals)) {
+    n <- n_vals[i]
+    lines(x, dgamma(x, shape = n, rate = lambda), 
+          col = colores[i], lwd = 2, lty = i)
+  }
+  
+  legend("topright", 
+         legend = c("Exponencial (n=1)", 
+                    paste("Gamma (n=", n_vals[-1], ")", sep = "")),
+         col = c("black", colores[-1]), lwd = 2, lty = 1:length(n_vals),
+         cex = 0.8)
+  
+  # Añadir información sobre parámetros
+  text(7, 0.9, paste("λ =", lambda), cex = 1.2, font = 2)
+  text(7, 0.8, "Gamma(n, λ) = suma de n Exp(λ)", cex = 0.9)
+  
+  cat("\nInterpretación del gráfico:\n")
+  cat("• La exponencial (n=1) es la distribución de un solo evento\n")
+  cat("• Gamma(n, λ) es la distribución del tiempo hasta n eventos\n")
+  cat("• A medida que n aumenta, la distribución se hace más simétrica\n")
+  cat("• Para n grande, se aproxima a una distribución normal\n")
+}
+
+# Ejecutar comparación visual
+comparacion_distribuciones()
+
+# ============================================================================
+# RESUMEN FINAL
+# ============================================================================
+
+cat("\n\n======================================================================\n")
+cat("RESUMEN FINAL DE TODOS LOS EJERCICIOS\n")
+cat("======================================================================\n")
+
+cat("EJERCICIO 1 - TCL PARA GAMMA:\n")
+cat("• Se simuló Gamma(α=2.5, λ=1.8) con diferentes tamaños de muestra\n")
+cat("• Se verificó que las medias muestrales siguen distribución normal\n")
+cat("• Se confirmó que Var(𝑋̄) = σ²/n\n")
+cat("• Se observó convergencia a la normalidad para n ≥ 30\n\n")
+
+cat("EJERCICIO 2 - SUMA DE EXPONENCIALES:\n")
+cat("• Se verificó que Σ Exp(λ) ~ Gamma(n, λ)\n")
+cat("• Se demostró la propiedad para n = 5, 10, 20\n")
+cat("• Se observó la evolución de la forma de la distribución Gamma\n")
+cat("• Se aplicó el TCL a la suma de exponenciales\n\n")
+
+cat("RELACIÓN ENTRE DISTRIBUCIONES:\n")
+cat("1. Exponencial(λ) = Gamma(1, λ)\n")
+cat("2. Suma de n Exp(λ) = Gamma(n, λ)\n")
+cat("3. Para n grande, Gamma(n, λ) ≈ Normal(n/λ, n/λ²)\n")
+cat("4. χ²(k) = Gamma(k/2, 1/2) (caso especial)\n\n")
+
+cat("APLICACIONES PRÁCTICAS:\n")
+cat("• Modelado de tiempos de vida y confiabilidad\n")
+cat("• Procesos de Poisson y tiempos entre eventos\n")
+cat("• Inferencia estadística con distribuciones Gamma\n")
+cat("• Verificación empírica de teoremas probabilísticos\n")
+```
+
+:::

@@ -1,0 +1,1819 @@
+---
+title: "Distribución t de Student."
+lang: es
+---
+
+```{=html}
+<style>
+main.content {
+text-align: justify}
+</style>
+```
+
+```{r}
+#| label: setup
+#| echo: false
+#| message: false
+#| warning: false
+
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+library(knitr)
+library(kableExtra)
+library(RColorBrewer)
+library(plotly)
+library(scales)
+library(viridis)
+
+```
+
+
+La **distribución t de Student** es una de las distribuciones de probabilidad más importantes en estadística inferencial, especialmente cuando trabajamos con muestras pequeñas o cuando la varianza poblacional es desconocida.
+
+**Usos más comunes:**
+
+**1. Pruebas de hipótesis:**
+
+- Pruebas t para una muestra (comparar una media muestral con un valor conocido)
+- Pruebas t para dos muestras independientes (comparar medias de dos grupos)
+- Pruebas t para muestras pareadas (comparar medias antes-después)
+
+**2. Intervalos de confianza:**
+
+- Construcción de intervalos de confianza para la media cuando $\sigma$ es desconocida
+- Intervalos de confianza para la diferencia de medias
+
+**3. Análisis de regresión:**
+
+- Pruebas de significancia de coeficientes de regresión
+- Intervalos de confianza para parámetros del modelo
+
+**4. Situaciones donde se prefiere sobre la normal:**
+
+- Muestras pequeñas ($n < 30$)
+- Varianza poblacional desconocida
+- Cuando se necesita mayor robustez ante valores extremos
+
+La distribución t fue desarrollada por William Sealy Gosset en 1908, quien publicó bajo el seudónimo "Student" mientras trabajaba en la cervecería Guinness.
+
+::: {#def-tstudent}
+
+Decimos que la variable aleatoria continua $X$ tiene una **distribución t de Student** con $n > 0$ grados de libertad si su función de densidad está dada por la siguiente expresión:
+
+\begin{equation}
+f(x) = \frac{\Gamma\left(\frac{n+1}{2}\right)}{\sqrt{n\pi} \Gamma\left(\frac{n}{2}\right)} \left(1 + \frac{x^2}{n}\right)^{-(n+1)/2}, \quad -\infty < x < \infty
+\end{equation}
+
+En tal caso se escribe $X \sim t(n)$, donde $n$ es un número real positivo que representa los **grados de libertad** de la distribución.
+
+:::
+
+## Propiedades de la Función de Densidad
+
+**Características principales:**
+
+1. **Dominio**: $(-\infty, \infty)$
+2. **Simetría**: La función es simétrica respecto a $x = 0$
+3. **Forma**: Campana, similar a la distribución normal estándar
+4. **Colas pesadas**: Comparada con $N(0,1)$, tiene colas más gruesas
+5. **Convergencia**: Cuando $n \to \infty$, la distribución $t(n)$ converge a $N(0,1)$
+
+**Parámetro:**
+
+- **$n$**: Grados de libertad (parámetro de forma)
+  * Debe ser un número real positivo
+  * Determina qué tan "pesadas" son las colas de la distribución
+  * A mayor $n$, más se aproxima a la normal estándar
+
+
+### Efecto de los grados de libertad 
+
+
+
+```{r}
+#| fig-width: 10
+#| fig-height: 6
+
+x <- seq(-4, 4, length.out = 1000)
+
+df_data <- data.frame(
+  x = rep(x, 5),
+  density = c(
+    dt(x, df = 1),    
+    dt(x, df = 2),    
+    dt(x, df = 5),    
+    dt(x, df = 30),   
+    dnorm(x, 0, 1)    
+  ),
+  distribution = factor(rep(c("t(1)", "t(2)", "t(5)", "t(30)", "N(0,1)"), 
+                           each = length(x)),
+                       levels = c("t(1)", "t(2)", "t(5)", "t(30)", "N(0,1)"))
+)
+
+# Crear gráfica
+densidad_t <- ggplot(df_data, aes(x = x, y = density, color = distribution)) +
+  geom_line(linewidth = 1.2) +
+  scale_color_manual(values = c("red", "blue", "green", "orange", "black")) +
+  labs(
+    title = "Comparación de Distribuciones t de Student con N(0,1)",
+    x = "x",
+    y = "Densidad f(x)",
+    color = "Distribución"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 12),
+    legend.position = "bottom",
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10)
+  ) +
+  xlim(-4, 4) +
+  ylim(0, 0.45)
+
+ggplotly(densidad_t)
+```
+
+
+
+
+**Con pocos grados de libertad:**
+
+- Las colas son más pesadas que la normal estándar
+- La distribución es más "aplastada" en el centro
+- Mayor probabilidad en los valores extremos
+- $t(1)$ corresponde a la distribución de Cauchy
+
+**Con muchos grados de libertad:**
+
+- Se aproxima cada vez más a $N(0,1)$
+- Las colas se vuelven menos pesadas
+- La forma se vuelve más *puntiaguda* en el centro
+
+**Convergencia:**
+
+- Para $n \geq 30$, la diferencia con $N(0,1)$ es prácticamente imperceptible
+- Cuando $n \to \infty$: $t(n) \to N(0,1)$
+
+
+## Función de Distribución Acumulada (CDF) 
+
+::: {#def-cdf_tstudent}
+
+La **función de distribución acumulada** de la distribución t de Student con $n$ grados de libertad se define como:
+
+$$F(x) = P(X \leq x) = \int_{-\infty}^{x} f(t) dt$$
+
+donde $f(t)$ es la función de densidad:
+
+$$f(t) = \frac{\Gamma\left(\frac{n+1}{2}\right)}{\sqrt{n\pi} \Gamma\left(\frac{n}{2}\right)} \left(1 + \frac{t^2}{n}\right)^{-(n+1)/2}$$
+
+Por lo tanto:
+
+$$F(x) = \int_{-\infty}^{x} \frac{\Gamma\left(\frac{n+1}{2}\right)}{\sqrt{n\pi} \Gamma\left(\frac{n}{2}\right)} \left(1 + \frac{t^2}{n}\right)^{-(n+1)/2} dt$$
+
+:::
+
+---
+
+### Propiedades de la CDF
+
+**Características principales:**
+
+1. **Dominio**: $(-\infty, \infty)$
+2. **Imagen**: $[0, 1]$
+3. **Monótona creciente**: $F'(x) = f(x) \geq 0$
+4. **Simetría**: $F(-x) = 1 - F(x)$ (debido a la simetría de la PDF)
+5. **Límites**:
+   - $\lim_{x \to -\infty} F(x) = 0$
+   - $\lim_{x \to \infty} F(x) = 1$
+   - $F(0) = 0.5$ (por simetría)
+
+
+### Comparación de CDF con diferentes grados de libertad
+
+```{r}
+#| echo: true
+#| fig-width: 12
+#| fig-height: 8
+
+library(ggplot2)
+library(gridExtra)
+
+# Crear secuencia de valores x
+x <- seq(-4, 4, length.out = 1000)
+
+# Crear data frame con diferentes grados de libertad para CDF
+df_cdf <- data.frame(
+  x = rep(x, 5),
+  cdf = c(
+    pt(x, df = 1),    # t con 1 grado de libertad
+    pt(x, df = 2),    # t con 2 grados de libertad
+    pt(x, df = 5),    # t con 5 grados de libertad
+    pt(x, df = 30),   # t con 30 grados de libertad
+    pnorm(x, 0, 1)    # Normal estándar
+  ),
+  distribution = factor(rep(c("t(1)", "t(2)", "t(5)", "t(30)", "N(0,1)"), 
+                           each = length(x)),
+                       levels = c("t(1)", "t(2)", "t(5)", "t(30)", "N(0,1)"))
+)
+
+# Gráfica de CDF
+p1 <- ggplot(df_cdf, aes(x = x, y = cdf, color = distribution, linetype = distribution)) +
+  geom_line(linewidth = 1.2) +
+  scale_color_manual(values = c("red", "blue", "green", "orange", "black")) +
+  scale_linetype_manual(values = c("solid", "solid", "solid", "dashed", "solid")) +
+  labs(
+    title = "Función de Distribución Acumulada (CDF)",
+    subtitle = "Comparación de distribuciones t de Student con N(0,1)",
+    x = "x",
+    y = "F(x) = P(X ≤ x)",
+    color = "Distribución",
+    linetype = "Distribución"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 12),
+    legend.position = "bottom",
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10)
+  ) +
+  geom_hline(yintercept = 0.5, linetype = "dotted", alpha = 0.7) +
+  geom_vline(xintercept = 0, linetype = "dotted", alpha = 0.7) +
+  xlim(-4, 4) +
+  ylim(0, 1)
+
+print(p1)
+```
+
+
+### Comparación conjunta: PDF y CDF
+
+```{r}
+#| echo: true
+#| fig-width: 14
+#| fig-height: 10
+
+library(gridExtra)
+
+# Datos para PDF
+df_pdf <- data.frame(
+  x = rep(x, 4),
+  pdf = c(
+    dt(x, df = 1),
+    dt(x, df = 5),
+    dt(x, df = 30),
+    dnorm(x, 0, 1)
+  ),
+  distribution = factor(rep(c("t(1)", "t(5)", "t(30)", "N(0,1)"), each = length(x)))
+)
+
+# Datos para CDF
+df_cdf_comp <- data.frame(
+  x = rep(x, 4),
+  cdf = c(
+    pt(x, df = 1),
+    pt(x, df = 5),
+    pt(x, df = 30),
+    pnorm(x, 0, 1)
+  ),
+  distribution = factor(rep(c("t(1)", "t(5)", "t(30)", "N(0,1)"), each = length(x)))
+)
+
+# Gráfica PDF
+p_pdf <- ggplot(df_pdf, aes(x = x, y = pdf, color = distribution)) +
+  geom_line(linewidth = 1.2) +
+  scale_color_manual(values = c("red", "green", "orange", "black")) +
+  labs(
+    title = "Función de Densidad (PDF)",
+    x = "x",
+    y = "f(x)",
+    color = "Distribución"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    legend.position = "bottom"
+  ) +
+  xlim(-4, 4)
+
+# Gráfica CDF
+p_cdf <- ggplot(df_cdf_comp, aes(x = x, y = cdf, color = distribution)) +
+  geom_line(linewidth = 1.2) +
+  scale_color_manual(values = c("red", "green", "orange", "black")) +
+  labs(
+    title = "Función de Distribución Acumulada (CDF)",
+    x = "x",
+    y = "F(x)",
+    color = "Distribución"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    legend.position = "bottom"
+  ) +
+  geom_hline(yintercept = 0.5, linetype = "dotted", alpha = 0.7) +
+  xlim(-4, 4) +
+  ylim(0, 1)
+
+# Combinar gráficas
+grid.arrange(p_pdf, p_cdf, ncol = 2, 
+             top = "Comparación PDF vs CDF - Distribución t de Student")
+```
+
+
+## Cálculo de Probabilidades 
+
+**Tipos de probabilidades**
+
+Para una variable aleatoria $X \sim t(n)$, podemos calcular diferentes tipos de probabilidades:
+
+1. **Probabilidad acumulada**: $P(X \leq a)$
+2. **Probabilidad en un intervalo**: $P(a \leq X \leq b)$
+3. **Probabilidad en la cola derecha**: $P(X \geq a)$
+4. **Probabilidad en ambas colas**: $P(X \leq -a) + P(X \geq a)$
+
+**Ecuaciones para el cálculo**
+
+**Probabilidad acumulada:**
+$$P(X \leq a) = F(a) = \int_{-\infty}^{a} f(t) dt$$
+
+**Probabilidad en un intervalo:**
+$$P(a \leq X \leq b) = F(b) - F(a) = \int_{a}^{b} f(t) dt$$
+
+**Probabilidad en la cola derecha:**
+$$P(X \geq a) = 1 - F(a) = \int_{a}^{\infty} f(t) dt$$
+
+
+```{r}
+#| fig-width: 12
+#| fig-height: 10
+
+# Función para crear gráfica de área bajo la curva
+# df_val: grados de libertad, a_val: valor inferior, b_val: valor superior (si aplica)
+# prob_type: "left", "right", "interval", "two_tails"
+create_probability_plot <- function(df_val, a_val, b_val = NULL, prob_type, title_text) {
+  x <- seq(-4, 4, length.out = 1000)
+  y <- dt(x, df = df_val)
+  
+  # Crear data frame base
+  df_base <- data.frame(x = x, y = y)
+  
+  # Determinar área a sombrear según el tipo de probabilidad
+  if (prob_type == "left") {
+    x_area <- x[x <= a_val]
+    y_area <- dt(x_area, df = df_val)
+    prob_val <- pt(a_val, df = df_val)
+  } else if (prob_type == "right") {
+    x_area <- x[x >= a_val]
+    y_area <- dt(x_area, df = df_val)
+    prob_val <- 1 - pt(a_val, df = df_val)
+  } else if (prob_type == "interval" && !is.null(b_val)) {
+    x_area <- x[x >= a_val & x <= b_val]
+    y_area <- dt(x_area, df = df_val)
+    prob_val <- pt(b_val, df = df_val) - pt(a_val, df = df_val)
+  } else if (prob_type == "two_tails") {
+    x_area1 <- x[x <= -abs(a_val)]
+    y_area1 <- dt(x_area1, df = df_val)
+    x_area2 <- x[x >= abs(a_val)]
+    y_area2 <- dt(x_area2, df = df_val)
+    prob_val <- pt(-abs(a_val), df = df_val) + (1 - pt(abs(a_val), df = df_val))
+  }
+  
+  # Crear gráfica base
+  p <- ggplot(df_base, aes(x = x, y = y)) +
+    geom_line(color = "black", linewidth = 1) +
+    theme_minimal() +
+    labs(
+      title = paste(title_text, sprintf("(df = %d)", df_val)),
+      subtitle = sprintf("Probabilidad = %.4f", prob_val),
+      x = "x",
+      y = "f(x)"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5, size = 12, face = "bold"),
+      plot.subtitle = element_text(hjust = 0.5, size = 10, color = "blue")
+    )
+  
+  # Agregar área sombreada según el tipo
+  if (prob_type == "left") {
+    p <- p + geom_area(data = data.frame(x = x_area, y = y_area), 
+                       aes(x = x, y = y), fill = "skyblue", alpha = 0.7) +
+      geom_vline(xintercept = a_val, color = "red", linetype = "dashed", linewidth = 1)
+  } else if (prob_type == "right") {
+    p <- p + geom_area(data = data.frame(x = x_area, y = y_area), 
+                       aes(x = x, y = y), fill = "lightcoral", alpha = 0.7) +
+      geom_vline(xintercept = a_val, color = "red", linetype = "dashed", linewidth = 1)
+  } else if (prob_type == "interval") {
+    p <- p + geom_area(data = data.frame(x = x_area, y = y_area), 
+                       aes(x = x, y = y), fill = "lightgreen", alpha = 0.7) +
+      geom_vline(xintercept = c(a_val, b_val), color = "red", linetype = "dashed", linewidth = 1)
+  } else if (prob_type == "two_tails") {
+    p <- p + geom_area(data = data.frame(x = x_area1, y = y_area1), 
+                       aes(x = x, y = y), fill = "orange", alpha = 0.7) +
+      geom_area(data = data.frame(x = x_area2, y = y_area2), 
+                aes(x = x, y = y), fill = "orange", alpha = 0.7) +
+      geom_vline(xintercept = c(-abs(a_val), abs(a_val)), color = "red", linetype = "dashed", linewidth = 1)
+  }
+  
+  return(p)
+}
+
+# Crear múltiples ejemplos de probabilidades
+p1 <- create_probability_plot(5, 1.5, prob_type = "left", 
+                             title_text = "P(X ≤ 1.5)")
+
+p2 <- create_probability_plot(5, 1.5, prob_type = "right", 
+                             title_text = "P(X ≥ 1.5)")
+
+p3 <- create_probability_plot(5, -1, 2, prob_type = "interval", 
+                             title_text = "P(-1 ≤ X ≤ 2)")
+
+p4 <- create_probability_plot(5, 2, prob_type = "two_tails", 
+                             title_text = "P(|X| ≥ 2)")
+
+# Combinar gráficas
+grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2,
+             top = "Ejemplos de Cálculo de Probabilidades - t(5)")
+```
+
+
+## Medidas Descriptivas
+
+Para una distribución $X \sim t(n)$:
+
+**Media (Esperanza)**
+
+\begin{equation}
+E(X) = \begin{cases}
+0 & \text{si } n > 1 \\
+\text{No existe} & \text{si } n \leq 1
+\end{cases}
+\end{equation}
+
+La media existe solo cuando $n > 1$ y siempre es igual a 0 debido a la simetría de la distribución.
+
+**Mediana**
+
+$$\text{Mediana} = 0$$
+
+Por simetría, la mediana siempre es 0, independientemente del valor de $n$.
+
+**Moda**
+
+$$\text{Moda} = 0$$
+
+El valor que maximiza la función de densidad es siempre 0, independientemente de $n$.
+
+**Varianza**
+
+\begin{equation}
+\text{Var}(X) = \begin{cases}
+\frac{n}{n-2} & \text{si } n > 2 \\
+\infty & \text{si } 1 < n \leq 2 \\
+\text{No existe} & \text{si } n \leq 1
+\end{cases}
+\end{equation}
+
+La varianza existe y es finita solo cuando $n > 2$. Para $1 < n \leq 2$, la varianza es infinita debido a las colas pesadas de la distribución.
+
+```{r}
+# Calcular varianza para diferentes grados de libertad
+n_values <- seq(3, 50, by = 0.1)  # Empezar en 3 para que la varianza exista
+variance_values <- n_values / (n_values - 2)
+
+# Crear data frame
+df_variance <- data.frame(
+  n = n_values,
+  variance = variance_values
+)
+
+# Gráfica de varianza
+p_var <- ggplot(df_variance, aes(x = n, y = variance)) +
+  geom_line(color = "blue", size = 1.2) +
+  geom_hline(yintercept = 1, color = "red", linetype = "dashed", size = 1) +
+  labs(
+    title = "Varianza de la Distribución t de Student",
+    subtitle = "Convergencia hacia σ² = 1 (Normal Estándar)",
+    x = "Grados de libertad (n)",
+    y = "Varianza"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 12)
+  ) +
+  annotate("text", x = 40, y = 1.1, label = "Var(N(0,1)) = 1", 
+           color = "red", size = 4) +
+  ylim(1, 6)
+
+p_var
+```
+
+
+## Ejercicios Propuestos
+
+::: {#exr-muestras_tstudent}
+
+Genera muestras aleatorias de tamaño 100, 300 y 1000 de una distribución t de Student con 5 grados de libertad. Para cada muestra:
+
+1. Calcula la media y varianza muestral; y compara con los valores teóricos.
+
+2. Para la muestra de mayor tamaño, realiza un histograma, superpone la función de densidad teórica de la variable aleatoria $t(5)$ y la función de densidad de una normal estándar.
+
+
+```{r}
+
+# Ejercicio: Análisis de la distribución t de Student
+
+# ============================================================================
+# CONFIGURACIÓN INICIAL
+# ============================================================================
+
+# Grados de libertad
+grados_libertad <- 5
+
+# Tamaños de muestra
+tamanos_muestra <- c(100, 300, 1000)
+
+cat("======================================================================\n")
+cat("ANÁLISIS DE LA DISTRIBUCIÓN t DE STUDENT\n")
+cat("======================================================================\n\n")
+
+cat("PARÁMETROS DE LA DISTRIBUCIÓN:\n")
+cat("  Grados de libertad (ν):", grados_libertad, "\n")
+
+# Valores teóricos de la distribución t
+# Para t(ν): Media = 0 (si ν > 1), Varianza = ν/(ν-2) (si ν > 2)
+media_teorica <- 0  # Para ν > 1
+if (grados_libertad > 2) {
+  varianza_teorica <- grados_libertad / (grados_libertad - 2)
+} else if (grados_libertad > 1) {
+  varianza_teorica <- Inf  # No definida para ν ≤ 2
+} else {
+  varianza_teorica <- NA  # No definida para ν ≤ 1
+}
+
+cat("  Media teórica (E[t]):", media_teorica, "\n")
+if (grados_libertad > 2) {
+  cat("  Varianza teórica (Var[t]): ν/(ν-2) =", round(varianza_teorica, 4), "\n")
+  cat("  Desviación estándar teórica:", round(sqrt(varianza_teorica), 4), "\n")
+} else if (grados_libertad == 2) {
+  cat("  Varianza teórica: Infinito (ν = 2)\n")
+} else {
+  cat("  Varianza teórica: No definida para ν ≤ 1\n")
+}
+
+# Comparación con la normal estándar
+cat("\nCOMPARACIÓN CON LA NORMAL ESTÁNDAR N(0,1):\n")
+cat("  Media N(0,1): 0 (igual a t)\n")
+cat("  Varianza N(0,1): 1\n")
+cat("  Varianza t(", grados_libertad, "): ", 
+    ifelse(grados_libertad > 2, round(varianza_teorica, 4), 
+           ifelse(grados_libertad == 2, "Inf", "No definida")), 
+    " (", ifelse(grados_libertad > 2, "mayor", ifelse(grados_libertad == 2, "mucho mayor", "no comparable")), 
+    " que 1)\n", sep = "")
+
+# ============================================================================
+# FUNCIÓN PARA SIMULAR Y ANALIZAR UNA MUESTRA
+# ============================================================================
+
+analizar_muestra_tstudent <- function(n, df, iteracion = NULL) {
+  # Generar muestra de distribución t
+  set.seed(123 + ifelse(!is.null(iteracion), iteracion, 0))
+  muestra <- rt(n, df = df)
+  
+  # Calcular estadísticos muestrales
+  media_muestral <- mean(muestra)
+  varianza_muestral <- var(muestra)
+  desviacion_muestral <- sd(muestra)
+  
+  # Calcular diferencias con valores teóricos (si están definidos)
+  if (df > 1) {
+    dif_media <- media_muestral - media_teorica
+  } else {
+    dif_media <- NA
+  }
+  
+  if (df > 2) {
+    dif_varianza <- varianza_muestral - varianza_teorica
+    error_rel_varianza <- abs(dif_varianza) / varianza_teorica * 100
+  } else {
+    dif_varianza <- NA
+    error_rel_varianza <- NA
+  }
+  
+  # Calcular error relativo de la media (en términos de desviación estándar)
+  if (df > 2) {
+    error_estandar_teorico <- sqrt(varianza_teorica / n)
+    error_rel_media <- abs(dif_media) / error_estandar_teorico * 100
+  } else {
+    error_rel_media <- NA
+  }
+  
+  # Devolver resultados
+  return(list(
+    n = n,
+    df = df,
+    muestra = muestra,
+    estadisticos = c(media_muestral, varianza_muestral, desviacion_muestral),
+    diferencias = c(dif_media, dif_varianza),
+    errores_relativos = c(error_rel_media, error_rel_varianza),
+    error_estandar_teorico = ifelse(df > 2, error_estandar_teorico, NA)
+  ))
+}
+
+# ============================================================================
+# SIMULACIÓN PARA DIFERENTES TAMAÑOS DE MUESTRA
+# ============================================================================
+
+# Almacenar resultados
+resultados <- list()
+tabla_resumen <- data.frame(
+  n = tamanos_muestra,
+  Media_Muestral = numeric(length(tamanos_muestra)),
+  Media_Teorica = rep(media_teorica, length(tamanos_muestra)),
+  Dif_Media = numeric(length(tamanos_muestra)),
+  Varianza_Muestral = numeric(length(tamanos_muestra)),
+  Varianza_Teorica = rep(ifelse(grados_libertad > 2, varianza_teorica, NA), length(tamanos_muestra)),
+  Dif_Varianza = numeric(length(tamanos_muestra)),
+  Error_Rel_Varianza = numeric(length(tamanos_muestra))
+)
+
+# Realizar simulaciones
+cat("\nREALIZANDO SIMULACIONES...\n")
+for (i in seq_along(tamanos_muestra)) {
+  n <- tamanos_muestra[i]
+  cat("\nProcesando n =", n, "...\n")
+  
+  # Analizar muestra
+  resultado <- analizar_muestra_tstudent(n, grados_libertad, i)
+  resultados[[i]] <- resultado
+  
+  # Almacenar en tabla
+  tabla_resumen[i, "Media_Muestral"] <- resultado$estadisticos[1]
+  tabla_resumen[i, "Dif_Media"] <- resultado$diferencias[1]
+  
+  tabla_resumen[i, "Varianza_Muestral"] <- resultado$estadisticos[2]
+  tabla_resumen[i, "Dif_Varianza"] <- resultado$diferencias[2]
+  tabla_resumen[i, "Error_Rel_Varianza"] <- resultado$errores_relativos[2]
+  
+  # Mostrar resultados parciales
+  cat("  Media muestral:", round(resultado$estadisticos[1], 4), "\n")
+  cat("  Diferencia con media teórica:", round(resultado$diferencias[1], 4), "\n")
+  
+  cat("  Varianza muestral:", round(resultado$estadisticos[2], 4), "\n")
+  if (grados_libertad > 2) {
+    cat("  Varianza teórica:", round(varianza_teorica, 4), "\n")
+    cat("  Diferencia:", round(resultado$diferencias[2], 4), "\n")
+    cat("  Error relativo:", round(resultado$errores_relativos[2], 2), "%\n")
+  } else {
+    cat("  Varianza teórica: No definida para ν ≤ 2\n")
+  }
+}
+
+# ============================================================================
+# ANÁLISIS DE LA MUESTRA MÁS GRANDE (n = 1000)
+# ============================================================================
+
+cat("\n======================================================================\n")
+cat("ANÁLISIS DETALLADO PARA n = 1000\n")
+cat("======================================================================\n")
+
+muestra_grande <- resultados[[3]]$muestra
+n_grande <- 1000
+
+# Estadísticas detalladas
+cat("Estadísticas descriptivas para n = 1000:\n")
+cat("  Media:", round(mean(muestra_grande), 4), "\n")
+cat("  Mediana:", round(median(muestra_grande), 4), "\n")
+cat("  Varianza:", round(var(muestra_grande), 4), "\n")
+cat("  Desviación estándar:", round(sd(muestra_grande), 4), "\n")
+cat("  Mínimo:", round(min(muestra_grande), 4), "\n")
+cat("  Máximo:", round(max(muestra_grande), 4), "\n")
+cat("  Rango:", round(max(muestra_grande) - min(muestra_grande), 4), "\n")
+cat("  Rango intercuartílico (IQR):", 
+    round(quantile(muestra_grande, 0.75) - quantile(muestra_grande, 0.25), 4), "\n\n")
+
+# Medidas de forma
+if (!require("moments")) install.packages("moments")
+library(moments)
+
+sesgo_muestral <- skewness(muestra_grande)
+curtosis_muestral <- kurtosis(muestra_grande)
+
+cat("Medidas de forma:\n")
+cat("  Sesgo (skewness):", round(sesgo_muestral, 4), "\n")
+cat("    Teórico para t(5): 0 (distribución simétrica)\n")
+cat("  Curtosis (kurtosis):", round(curtosis_muestral, 4), "\n")
+cat("    Teórico para t(5):", round(3 + 6/(grados_libertad-4), 4), 
+    " (para ν > 4)\n", sep = "")
+cat("    Curtosis N(0,1): 3\n")
+
+# ============================================================================
+# VISUALIZACIÓN DE LA MUESTRA MÁS GRANDE
+# ============================================================================
+
+cat("\n======================================================================\n")
+cat("VISUALIZACIÓN: HISTOGRAMA CON DENSIDADES TEÓRICAS\n")
+cat("======================================================================\n")
+
+# Configurar espacio para gráficos
+par(mfrow = c(2, 2))
+
+# 1. Histograma con densidad t(5) y N(0,1)
+hist(muestra_grande, breaks = 50, freq = FALSE,
+     col = "lightblue", border = "white",
+     main = paste("Distribución t de Student (ν = ", grados_libertad, ")\nn = ", n_grande, sep = ""),
+     xlab = "Valor", ylab = "Densidad",
+     xlim = c(-5, 5),
+     ylim = c(0, 0.45))
+
+# Superponer densidad teórica t(5)
+x <- seq(-5, 5, length.out = 1000)
+y_t <- dt(x, df = grados_libertad)
+lines(x, y_t, col = "red", lwd = 3, lty = 1)
+
+# Superponer densidad N(0,1)
+y_norm <- dnorm(x)
+lines(x, y_norm, col = "darkgreen", lwd = 2, lty = 2)
+
+# Agregar líneas verticales para la media
+abline(v = 0, col = "black", lwd = 1.5, lty = 3)
+abline(v = mean(muestra_grande), col = "blue", lwd = 1.5, lty = 4)
+
+legend("topright",
+       legend = c("Histograma", 
+                  paste("Densidad t(", grados_libertad, ")", sep = ""),
+                  "Densidad N(0,1)",
+                  "Media teórica (0)",
+                  "Media muestral"),
+       col = c("lightblue", "red", "darkgreen", "black", "blue"),
+       lwd = c(NA, 3, 2, 1.5, 1.5),
+       lty = c(NA, 1, 2, 3, 4),
+       fill = c("lightblue", NA, NA, NA, NA),
+       border = c("white", NA, NA, NA, NA),
+       cex = 0.8)
+
+# 2. Comparación de colas (zoom en las colas)
+# Colas más pesadas de la t vs normal
+x_colas <- seq(2, 5, length.out = 100)
+y_t_colas <- dt(x_colas, df = grados_libertad)
+y_norm_colas <- dnorm(x_colas)
+
+plot(x_colas, y_t_colas, type = "l", col = "red", lwd = 3,
+     main = "Comparación de Colas (derecha)",
+     xlab = "x", ylab = "Densidad",
+     ylim = c(0, max(y_t_colas, y_norm_colas) * 1.1))
+lines(x_colas, y_norm_colas, col = "darkgreen", lwd = 2, lty = 2)
+
+# Calcular ratio de colas
+ratio_colas <- y_t_colas / y_norm_colas
+lines(x_colas, ratio_colas, col = "purple", lwd = 2, lty = 3)
+
+legend("topright",
+       legend = c(paste("t(", grados_libertad, ")", sep = ""),
+                  "N(0,1)",
+                  "Ratio t/N"),
+       col = c("red", "darkgreen", "purple"),
+       lwd = c(3, 2, 2),
+       lty = c(1, 2, 3))
+
+# Agregar anotación sobre colas pesadas
+text(3.5, max(y_t_colas) * 0.9, 
+     "Colas más pesadas\nen t de Student", 
+     col = "red", cex = 0.8)
+
+# 3. Función de distribución acumulada (CDF)
+plot(ecdf(muestra_grande), col = "blue", lwd = 2,
+     main = "Función de Distribución Acumulada",
+     xlab = "x", ylab = "F(x)",
+     xlim = c(-5, 5))
+
+# CDF teórica t(5)
+lines(x, pt(x, df = grados_libertad), col = "red", lwd = 2, lty = 1)
+
+# CDF teórica N(0,1)
+lines(x, pnorm(x), col = "darkgreen", lwd = 2, lty = 2)
+
+legend("topleft",
+       legend = c("CDF empírica",
+                  paste("CDF teórica t(", grados_libertad, ")", sep = ""),
+                  "CDF teórica N(0,1)"),
+       col = c("blue", "red", "darkgreen"),
+       lwd = 2, lty = c(1, 1, 2),
+       cex = 0.8)
+
+# 4. Q-Q plot comparativo
+# Q-Q plot vs t teórica
+qqplot(qt(ppoints(n_grande), df = grados_libertad), muestra_grande,
+       main = "Q-Q Plot: t de Student",
+       xlab = paste("Cuantiles teóricos t(", grados_libertad, ")", sep = ""),
+       ylab = "Cuantiles muestrales",
+       pch = 19, cex = 0.5, col = "blue")
+abline(0, 1, col = "red", lwd = 2)
+
+# Q-Q plot vs normal
+qqnorm(muestra_grande,
+       main = "Q-Q Plot: Normal",
+       pch = 19, cex = 0.5, col = "darkgreen")
+qqline(muestra_grande, col = "red", lwd = 2)
+
+par(mfrow = c(1, 1))
+
+# ============================================================================
+# COMPARACIÓN ENTRE LOS TRES TAMAÑOS DE MUESTRA
+# ============================================================================
+
+cat("\n======================================================================\n")
+cat("COMPARACIÓN ENTRE DIFERENTES TAMAÑOS DE MUESTRA\n")
+cat("======================================================================\n")
+
+# Configurar espacio para gráficos comparativos
+par(mfrow = c(2, 2))
+
+# 1. Convergencia de la media muestral
+plot(tabla_resumen$n, tabla_resumen$Media_Muestral, type = "b",
+     pch = 19, col = "blue", lwd = 2,
+     main = "Convergencia de la Media Muestral",
+     xlab = "Tamaño de muestra (n)", ylab = "Media muestral",
+     ylim = c(min(tabla_resumen$Media_Muestral) - 0.1, 
+              max(tabla_resumen$Media_Muestral) + 0.1))
+abline(h = media_teorica, col = "red", lwd = 2, lty = 2)
+grid()
+
+# Agregar banda de error teórico
+if (grados_libertad > 2) {
+  error_estandar <- sqrt(varianza_teorica / tabla_resumen$n)
+  lines(tabla_resumen$n, media_teorica + 2 * error_estandar,
+        col = "orange", lwd = 1, lty = 3)
+  lines(tabla_resumen$n, media_teorica - 2 * error_estandar,
+        col = "orange", lwd = 1, lty = 3)
+  
+  legend("topright",
+         legend = c("Media muestral", "Media teórica (0)", "Banda ±2SE"),
+         col = c("blue", "red", "orange"),
+         lwd = c(2, 2, 1), lty = c(1, 2, 3))
+}
+
+# 2. Convergencia de la varianza muestral (solo si ν > 2)
+if (grados_libertad > 2) {
+  plot(tabla_resumen$n, tabla_resumen$Varianza_Muestral, type = "b",
+       pch = 19, col = "darkgreen", lwd = 2,
+       main = "Convergencia de la Varianza Muestral",
+       xlab = "Tamaño de muestra (n)", ylab = "Varianza muestral",
+       ylim = c(min(tabla_resumen$Varianza_Muestral) * 0.9, 
+                max(tabla_resumen$Varianza_Muestral) * 1.1))
+  abline(h = varianza_teorica, col = "red", lwd = 2, lty = 2)
+  grid()
+  
+  # Error teórico para la varianza muestral
+  # Para t(ν): Var(S²) ≈ 2σ⁴/(n-1) * (ν/(ν-4)) para ν > 4
+  if (grados_libertad > 4) {
+    factor_t <- grados_libertad / (grados_libertad - 4)
+    error_var <- sqrt(2 * varianza_teorica^2 / (tabla_resumen$n - 1) * factor_t)
+  } else {
+    # Aproximación conservadora
+    error_var <- sqrt(2 * varianza_teorica^2 / (tabla_resumen$n - 1))
+  }
+  
+  lines(tabla_resumen$n, varianza_teorica + 2 * error_var,
+        col = "orange", lwd = 1, lty = 3)
+  lines(tabla_resumen$n, varianza_teorica - 2 * error_var,
+        col = "orange", lwd = 1, lty = 3)
+  
+  legend("topright",
+         legend = c("Varianza muestral", 
+                    paste("Varianza teórica (", round(varianza_teorica, 2), ")", sep = ""),
+                    "Banda ±2SE"),
+         col = c("darkgreen", "red", "orange"),
+         lwd = c(2, 2, 1), lty = c(1, 2, 3))
+}
+
+# 3. Distribuciones para diferentes tamaños de muestra
+# Crear un gráfico con densidades de las tres muestras
+x_range <- seq(-4, 4, length.out = 1000)
+
+plot(x_range, dt(x_range, df = grados_libertad), type = "l",
+     col = "black", lwd = 3, lty = 1,
+     main = "Distribuciones Muestrales para Diferentes n",
+     xlab = "x", ylab = "Densidad",
+     ylim = c(0, 0.45))
+
+# Colores para diferentes tamaños de muestra
+colores <- c("blue", "green", "red")
+
+for (i in 1:3) {
+  densidad <- density(resultados[[i]]$muestra)
+  lines(densidad$x, densidad$y, 
+        col = colores[i], lwd = 2, lty = i+1)
+}
+
+legend("topright",
+       legend = c(paste("Teórica t(", grados_libertad, ")", sep = ""),
+                  paste("n =", tamanos_muestra[1]),
+                  paste("n =", tamanos_muestra[2]),
+                  paste("n =", tamanos_muestra[3])),
+       col = c("black", colores),
+       lwd = c(3, 2, 2, 2),
+       lty = c(1, 2, 3, 4),
+       cex = 0.8)
+
+# 4. Error relativo de la varianza
+if (grados_libertad > 2) {
+  plot(tabla_resumen$n, tabla_resumen$Error_Rel_Varianza, type = "b",
+       pch = 19, col = "purple", lwd = 2,
+       main = "Error Relativo de la Varianza",
+       xlab = "Tamaño de muestra (n)", ylab = "Error relativo (%)",
+       ylim = c(0, max(tabla_resumen$Error_Rel_Varianza) * 1.1),
+       log = "x")
+  grid()
+  
+  # Línea de referencia para 5% de error
+  abline(h = 5, col = "red", lwd = 1, lty = 2)
+  text(max(tabla_resumen$n) * 0.8, 5.5, "5%", col = "red", cex = 0.8)
+  
+  legend("topright",
+         legend = "Error relativo",
+         col = "purple", lwd = 2, pch = 19)
+}
+
+par(mfrow = c(1, 1))
+
+# ============================================================================
+# TABLA RESUMEN DETALLADA
+# ============================================================================
+
+cat("\n======================================================================\n")
+cat("TABLA RESUMEN DE RESULTADOS\n")
+cat("======================================================================\n")
+
+# Formatear tabla para mejor presentación
+tabla_formateada <- data.frame(
+  n = tabla_resumen$n,
+  Media_Muestral = round(tabla_resumen$Media_Muestral, 4),
+  Dif_Media = round(tabla_resumen$Dif_Media, 4),
+  Varianza_Muestral = round(tabla_resumen$Varianza_Muestral, 4)
+)
+
+if (grados_libertad > 2) {
+  tabla_formateada$Varianza_Teorica <- round(tabla_resumen$Varianza_Teorica, 4)
+  tabla_formateada$Dif_Varianza <- round(tabla_resumen$Dif_Varianza, 4)
+  tabla_formateada$Error_Rel_Varianza <- paste(round(tabla_resumen$Error_Rel_Varianza, 2), "%", sep = "")
+}
+
+print(tabla_formateada, row.names = FALSE)
+
+# ============================================================================
+# ANÁLISIS DE PROPIEDADES ESPECIALES DE LA DISTRIBUCIÓN t
+# ============================================================================
+
+cat("\n======================================================================\n")
+cat("PROPIEDADES ESPECIALES DE LA DISTRIBUCIÓN t DE STUDENT\n")
+cat("======================================================================\n")
+
+cat("1. RELACIÓN CON LA DISTRIBUCIÓN NORMAL:\n")
+cat("   • t(ν) → N(0,1) cuando ν → ∞\n")
+cat("   • Para ν finito, t tiene colas más pesadas que la normal\n")
+cat("   • La varianza: Var[t(ν)] = ν/(ν-2) > 1 para ν > 2\n")
+cat("   • Para ν = 5: Var = 5/3 ≈ 1.6667\n\n")
+
+cat("2. SIMETRÍA:\n")
+cat("   • La distribución t es simétrica alrededor de 0\n")
+cat("   • Media = Mediana = Moda = 0 (si ν > 1)\n")
+cat("   • Todos los momentos impares son 0 (si existen)\n\n")
+
+cat("3. MOMENTOS:\n")
+if (grados_libertad > 1) {
+  cat("   • E[t] = 0 (si ν > 1)\n")
+}
+if (grados_libertad > 2) {
+  cat("   • Var[t] = ν/(ν-2) (si ν > 2)\n")
+}
+if (grados_libertad > 3) {
+  cat("   • Sesgo = 0 (por simetría)\n")
+}
+if (grados_libertad > 4) {
+  curtosis_teorica <- 3 + 6/(grados_libertad - 4)
+  cat("   • Curtosis =", round(curtosis_teorica, 4), "(si ν > 4)\n")
+  cat("   • Exceso de curtosis =", round(6/(grados_libertad - 4), 4), "> 0\n")
+}
+
+cat("\n4. APLICACIONES PRÁCTICAS:\n")
+cat("   • Inferencia estadística con muestras pequeñas\n")
+cat("   • Pruebas t para comparación de medias\n")
+cat("   • Intervalos de confianza cuando σ es desconocida\n")
+cat("   • Regresión lineal (distribución de coeficientes)\n")
+
+# ============================================================================
+# VERIFICACIÓN DE LA APROXIMACIÓN A LA NORMAL
+# ============================================================================
+
+cat("\n======================================================================\n")
+cat("VERIFICACIÓN DE LA APROXIMACIÓN A LA NORMAL\n")
+cat("======================================================================\n")
+
+# Comparar con t(30) y t(100) para ver aproximación a normal
+grados_comparacion <- c(5, 10, 30, 100)
+x_comp <- seq(-4, 4, length.out = 1000)
+
+dev.new()
+plot(x_comp, dnorm(x_comp), type = "l", col = "black", lwd = 3,
+     main = "Aproximación de t(ν) a N(0,1) cuando ν aumenta",
+     xlab = "x", ylab = "Densidad",
+     ylim = c(0, 0.45))
+
+colores_comp <- rainbow(length(grados_comparacion))
+
+for (i in seq_along(grados_comparacion)) {
+  lines(x_comp, dt(x_comp, df = grados_comparacion[i]), 
+        col = colores_comp[i], lwd = 2, lty = i)
+}
+
+legend("topright",
+       legend = c("N(0,1)", 
+                  paste("t(", grados_comparacion, ")", sep = "")),
+       col = c("black", colores_comp),
+       lwd = c(3, rep(2, length(grados_comparacion))),
+       lty = 1:(length(grados_comparacion)+1),
+       cex = 0.8)
+
+# Calcular diferencias máximas
+cat("\nDiferencia máxima entre t(ν) y N(0,1):\n")
+for (i in seq_along(grados_comparacion)) {
+  diff_max <- max(abs(dt(x_comp, df = grados_comparacion[i]) - dnorm(x_comp)))
+  cat("  t(", grados_comparacion[i], ") vs N(0,1): ", round(diff_max, 4), "\n", sep = "")
+}
+
+# ============================================================================
+# CONCLUSIÓN
+# ============================================================================
+
+cat("\n======================================================================\n")
+cat("CONCLUSIÓN FINAL\n")
+cat("======================================================================\n")
+
+cat("RESUMEN DE HALLAZGOS PARA t(", grados_libertad, "):\n", sep = "")
+cat("1. La media muestral converge a 0, como se espera teóricamente\n")
+if (grados_libertad > 2) {
+  cat("2. La varianza muestral converge a ", round(varianza_teorica, 4), 
+      " (ν/(ν-2) = ", grados_libertad, "/", grados_libertad-2, ")\n", sep = "")
+} else {
+  cat("2. La varianza teórica no está definida para ν ≤ 2\n")
+}
+cat("3. La distribución t tiene colas más pesadas que la normal\n")
+cat("4. Para n = 1000, la muestra reproduce bien la forma teórica\n")
+cat("5. La distribución es simétrica (sesgo cercano a 0)\n\n")
+
+cat("RECOMENDACIONES PRÁCTICAS:\n")
+cat("• Para inferencia con t de Student, usar n ≥ 30 para buena aproximación\n")
+cat("• Recordar que t(ν) tiene mayor variabilidad que N(0,1)\n")
+cat("• Para ν grande (>30), se puede usar aproximación normal\n")
+cat("• Siempre verificar supuestos de normalidad en aplicaciones prácticas\n")
+
+cat("\nLIMITACIONES DE LA DISTRIBUCIÓN t:\n")
+cat("• Varianza infinita para ν ≤ 2\n")
+cat("• Curtosis infinita para ν ≤ 4\n")
+cat("• No todos los momentos existen para ν pequeño\n")
+```
+
+:::
+
+
+::: {#exr-relacion_normal_ji}
+
+::: {#prp-rel_normal_ji}
+
+Si $X\sim N(0,1)$ y $Y\sim \chi^2(n)$ son dos variables aleatorias independientes, entonces la variable aleatoria:
+
+$$T=\frac{X}{\sqrt{Y/n}}\sim t(n)$$
+
+
+
+
+
+```{r}
+# Verificación de la relación: t = X / sqrt(Y/n) ~ t(n)
+# Donde X ~ N(0,1), Y ~ χ²(n), independientes
+
+# ============================================================================
+# CONFIGURACIÓN INICIAL
+# ============================================================================
+
+# Grados de libertad
+n <- 10
+
+# Tamaño de muestra
+tamano_muestra <- 1000
+
+cat("======================================================================\n")
+cat("VERIFICACIÓN DE LA RELACIÓN: t = X / sqrt(Y/n) ~ t(n)\n")
+cat("======================================================================\n\n")
+
+cat("PARÁMETROS:\n")
+cat("  Grados de libertad (n):", n, "\n")
+cat("  Tamaño de muestra:", tamano_muestra, "\n\n")
+
+cat("DISTRIBUCIONES INVOLUCRADAS:\n")
+cat("  X ~ N(0,1) (normal estándar)\n")
+cat("  Y ~ χ²(", n, ") (ji-cuadrada con ", n, " grados de libertad)\n", sep = "")
+cat("  T = X / sqrt(Y/", n, ") ~ t(", n, ") (t de Student)\n\n", sep = "")
+
+# ============================================================================
+# GENERACIÓN DE MUESTRAS
+# ============================================================================
+
+cat("GENERANDO MUESTRAS...\n")
+
+# Semilla para reproducibilidad
+set.seed(123)
+
+# 1. Generar X ~ N(0,1)
+X <- rnorm(tamano_muestra, mean = 0, sd = 1)
+cat("  Muestra X ~ N(0,1) generada\n")
+
+# 2. Generar Y ~ χ²(n)
+Y <- rchisq(tamano_muestra, df = n)
+cat("  Muestra Y ~ χ²(", n, ") generada\n", sep = "")
+
+# 3. Calcular T = X / sqrt(Y/n)
+T_calculada <- X / sqrt(Y/n)
+cat("  Variable T calculada: T = X / sqrt(Y/", n, ")\n\n", sep = "")
+
+# ============================================================================
+# ESTADÍSTICAS DESCRIPTIVAS
+# ============================================================================
+
+cat("ESTADÍSTICAS DESCRIPTIVAS:\n")
+
+# Estadísticas de X
+cat("\n1. VARIABLE X ~ N(0,1):\n")
+cat("   Media:", round(mean(X), 4), " (teórica: 0)\n")
+cat("   Varianza:", round(var(X), 4), " (teórica: 1)\n")
+cat("   Desviación estándar:", round(sd(X), 4), " (teórica: 1)\n")
+
+# Estadísticas de Y
+cat("\n2. VARIABLE Y ~ χ²(", n, "):\n", sep = "")
+cat("   Media:", round(mean(Y), 4), " (teórica: n = ", n, ")\n", sep = "")
+cat("   Varianza:", round(var(Y), 4), " (teórica: 2n = ", 2*n, ")\n", sep = "")
+cat("   Desviación estándar:", round(sd(Y), 4), 
+    " (teórica: sqrt(2n) = ", round(sqrt(2*n), 4), ")\n", sep = "")
+
+# Estadísticas de T
+cat("\n3. VARIABLE T CALCULADA:\n")
+cat("   Media:", round(mean(T_calculada), 4), " (teórica t(", n, "): 0)\n", sep = "")
+if (n > 2) {
+  varianza_teorica_t <- n / (n - 2)
+  cat("   Varianza:", round(var(T_calculada), 4), 
+      " (teórica t(", n, "): n/(n-2) = ", 
+      round(varianza_teorica_t, 4), ")\n", sep = "")
+} else {
+  cat("   Varianza:", round(var(T_calculada), 4), 
+      " (teórica t(", n, "): Infinito para n ≤ 2)\n", sep = "")
+}
+
+# Medidas de forma
+if (!require("moments")) install.packages("moments")
+library(moments)
+
+sesgo_T <- skewness(T_calculada)
+curtosis_T <- kurtosis(T_calculada)
+
+cat("   Sesgo (skewness):", round(sesgo_T, 4), " (teórico: 0 por simetría)\n")
+if (n > 4) {
+  curtosis_teorica_t <- 3 + 6/(n - 4)
+  cat("   Curtosis (kurtosis):", round(curtosis_T, 4), 
+      " (teórica t(", n, "): ", round(curtosis_teorica_t, 4), ")\n", sep = "")
+} else {
+  cat("   Curtosis (kurtosis):", round(curtosis_T, 4), 
+      " (teórica t(", n, "): Infinita para n ≤ 4)\n", sep = "")
+}
+
+# ============================================================================
+# COMPARACIÓN VISUAL: HISTOGRAMA vs DENSIDAD TEÓRICA
+# ============================================================================
+
+cat("\n======================================================================\n")
+cat("COMPARACIÓN VISUAL: HISTOGRAMA vs DENSIDAD TEÓRICA\n")
+cat("======================================================================\n")
+
+# Configurar espacio para gráficos
+par(mfrow = c(2, 3))
+
+# 1. Distribución de X ~ N(0,1)
+hist(X, breaks = 30, freq = FALSE,
+     col = "lightblue", border = "white",
+     main = "Distribución de X ~ N(0,1)",
+     xlab = "X", ylab = "Densidad",
+     xlim = c(-4, 4))
+
+# Densidad teórica N(0,1)
+x_norm <- seq(-4, 4, length.out = 1000)
+lines(x_norm, dnorm(x_norm), col = "red", lwd = 2)
+
+legend("topright", 
+       legend = c("Muestral", "Teórica N(0,1)"),
+       col = c("lightblue", "red"),
+       lwd = c(NA, 2),
+       fill = c("lightblue", NA),
+       border = c("white", NA))
+
+# 2. Distribución de Y ~ χ²(n)
+hist(Y, breaks = 30, freq = FALSE,
+     col = "lightgreen", border = "white",
+     main = paste("Distribución de Y ~ χ²(", n, ")", sep = ""),
+     xlab = "Y", ylab = "Densidad")
+
+# Densidad teórica χ²(n)
+y_chi <- seq(0, max(Y), length.out = 1000)
+lines(y_chi, dchisq(y_chi, df = n), col = "darkgreen", lwd = 2)
+
+# Línea para la media teórica
+abline(v = n, col = "red", lwd = 2, lty = 2)
+
+legend("topright", 
+       legend = c("Muestral", paste("Teórica χ²(", n, ")", sep = ""), "Media teórica"),
+       col = c("lightgreen", "darkgreen", "red"),
+       lwd = c(NA, 2, 2),
+       fill = c("lightgreen", NA, NA),
+       border = c("white", NA, NA),
+       lty = c(NA, 1, 2))
+
+# 3. Distribución de T calculada vs t teórica
+hist(T_calculada, breaks = 30, freq = FALSE,
+     col = "lightcoral", border = "white",
+     main = paste("Distribución de T = X/√(Y/", n, ")", sep = ""),
+     xlab = "T", ylab = "Densidad",
+     xlim = c(-4, 4))
+
+# Densidad teórica t(n)
+x_t <- seq(-4, 4, length.out = 1000)
+lines(x_t, dt(x_t, df = n), col = "darkred", lwd = 3)
+
+# Densidad N(0,1) para comparación
+lines(x_t, dnorm(x_t), col = "blue", lwd = 2, lty = 2)
+
+legend("topright", 
+       legend = c("T calculada", 
+                  paste("Teórica t(", n, ")", sep = ""),
+                  "N(0,1) para comparación"),
+       col = c("lightcoral", "darkred", "blue"),
+       lwd = c(NA, 3, 2),
+       fill = c("lightcoral", NA, NA),
+       border = c("white", NA, NA),
+       lty = c(NA, 1, 2))
+
+# 4. Superposición directa de densidades
+# Primero, crear un gráfico vacío con los límites adecuados
+plot(density(T_calculada), type = "n",
+     main = "Comparación Detallada de Densidades",
+     xlab = "Valor", ylab = "Densidad",
+     xlim = c(-4, 4), ylim = c(0, 0.45))
+
+# Línea para densidad de T calculada
+lines(density(T_calculada), col = "blue", lwd = 3)
+
+# Línea para densidad teórica t(n)
+lines(x_t, dt(x_t, df = n), col = "red", lwd = 2, lty = 2)
+
+# Línea para densidad N(0,1)
+lines(x_t, dnorm(x_t), col = "darkgreen", lwd = 2, lty = 3)
+
+legend("topright",
+       legend = c("T calculada (densidad kernel)",
+                  paste("Teórica t(", n, ")", sep = ""),
+                  "Teórica N(0,1)"),
+       col = c("blue", "red", "darkgreen"),
+       lwd = c(3, 2, 2),
+       lty = c(1, 2, 3))
+
+# 5. Función de distribución acumulada (CDF)
+plot(ecdf(T_calculada), col = "blue", lwd = 2,
+     main = "Función de Distribución Acumulada",
+     xlab = "t", ylab = "F(t)",
+     xlim = c(-4, 4))
+
+# CDF teórica t(n)
+lines(x_t, pt(x_t, df = n), col = "red", lwd = 2, lty = 2)
+
+# CDF teórica N(0,1)
+lines(x_t, pnorm(x_t), col = "darkgreen", lwd = 2, lty = 3)
+
+legend("topleft",
+       legend = c("CDF empírica de T",
+                  paste("CDF teórica t(", n, ")", sep = ""),
+                  "CDF teórica N(0,1)"),
+       col = c("blue", "red", "darkgreen"),
+       lwd = 2, lty = c(1, 2, 3))
+
+# 6. Q-Q plot comparativo
+qqplot(qt(ppoints(tamano_muestra), df = n), T_calculada,
+       main = paste("Q-Q Plot: T calculada vs t(", n, ")", sep = ""),
+       xlab = paste("Cuantiles teóricos t(", n, ")", sep = ""),
+       ylab = "Cuantiles muestrales de T",
+       pch = 19, cex = 0.5, col = "blue")
+abline(0, 1, col = "red", lwd = 2)
+
+# Agregar línea de regresión para ver desviaciones
+regresion <- lm(T_calculada ~ qt(ppoints(tamano_muestra), df = n))
+abline(regresion, col = "darkgreen", lwd = 2, lty = 2)
+
+legend("topleft",
+       legend = c("Puntos", "Línea y=x", "Línea de regresión"),
+       col = c("blue", "red", "darkgreen"),
+       pch = c(19, NA, NA),
+       lwd = c(NA, 2, 2),
+       lty = c(NA, 1, 2))
+
+par(mfrow = c(1, 1))
+
+# ============================================================================
+# PRUEBAS ESTADÍSTICAS DE BONDAD DE AJUSTE
+# ============================================================================
+
+cat("\n======================================================================\n")
+cat("PRUEBAS ESTADÍSTICAS DE BONDAD DE AJUSTE\n")
+cat("======================================================================\n")
+
+# 1. Prueba de Kolmogorov-Smirnov
+ks_test <- ks.test(T_calculada, pt, df = n)
+cat("1. Prueba de Kolmogorov-Smirnov:\n")
+cat("   H0: T sigue distribución t(", n, ")\n", sep = "")
+cat("   Estadístico D =", round(ks_test$statistic, 4), "\n")
+cat("   p-value =", round(ks_test$p.value, 4), "\n")
+
+if (ks_test$p.value > 0.05) {
+  cat("   Conclusión: No se rechaza H0 (las distribuciones son similares) ✓\n")
+} else {
+  cat("   Conclusión: Se rechaza H0 (las distribuciones son diferentes) ✗\n")
+}
+
+# 2. Prueba de Shapiro-Wilk (para normalidad, como referencia)
+shapiro_test <- shapiro.test(T_calculada)
+cat("\n2. Prueba de Shapiro-Wilk (para normalidad):\n")
+cat("   H0: T sigue distribución normal\n")
+cat("   Estadístico W =", round(shapiro_test$statistic, 4), "\n")
+cat("   p-value =", round(shapiro_test$p.value, 4), "\n")
+
+if (shapiro_test$p.value > 0.05) {
+  cat("   Conclusión: No se rechaza H0 (podría ser normal) - pero esperamos que NO sea normal\n")
+} else {
+  cat("   Conclusión: Se rechaza H0 (NO es normal) - como se espera para t(", n, ") ✓\n", sep = "")
+}
+
+# 3. Comparación de momentos
+cat("\n3. Comparación de momentos teóricos vs muestrales:\n")
+
+momentos_teoricos <- data.frame(
+  Momento = c("Media", "Varianza", "Sesgo", "Curtosis"),
+  Teorico_t = c(0, 
+                ifelse(n > 2, round(n/(n-2), 4), Inf),
+                0,
+                ifelse(n > 4, round(3 + 6/(n-4), 4), Inf)),
+  Teorico_N01 = c(0, 1, 0, 3),
+  Muestral = c(round(mean(T_calculada), 4),
+               round(var(T_calculada), 4),
+               round(sesgo_T, 4),
+               round(curtosis_T, 4))
+)
+
+print(momentos_teoricos, row.names = FALSE)
+
+# ============================================================================
+# SIMULACIÓN ADICIONAL: VERIFICACIÓN PARA DIFERENTES n
+# ============================================================================
+
+cat("\n======================================================================\n")
+cat("VERIFICACIÓN PARA DIFERENTES GRADOS DE LIBERTAD\n")
+cat("======================================================================\n")
+
+# Probamos para diferentes valores de n
+n_valores <- c(5, 10, 20, 30)
+num_sim <- 1000
+
+resultados_comparacion <- data.frame(
+  n = n_valores,
+  KS_pvalue = numeric(length(n_valores)),
+  Media_Error = numeric(length(n_valores)),
+  Varianza_Error = numeric(length(n_valores))
+)
+
+for (i in seq_along(n_valores)) {
+  n_temp <- n_valores[i]
+  
+  # Generar muestras
+  X_temp <- rnorm(num_sim)
+  Y_temp <- rchisq(num_sim, df = n_temp)
+  T_temp <- X_temp / sqrt(Y_temp/n_temp)
+  
+  # Prueba KS
+  ks_temp <- ks.test(T_temp, pt, df = n_temp)
+  
+  # Errores
+  media_error <- abs(mean(T_temp))
+  if (n_temp > 2) {
+    var_teorica <- n_temp/(n_temp-2)
+    var_error <- abs(var(T_temp) - var_teorica)/var_teorica * 100
+  } else {
+    var_error <- NA
+  }
+  
+  resultados_comparacion[i, "KS_pvalue"] <- ks_temp$p.value
+  resultados_comparacion[i, "Media_Error"] <- media_error
+  resultados_comparacion[i, "Varianza_Error"] <- var_error
+}
+
+cat("Resultados para diferentes n (", num_sim, " simulaciones cada uno):\n", sep = "")
+print(resultados_comparacion, row.names = FALSE)
+
+cat("\nInterpretación:\n")
+cat("• p-values > 0.05 indican buen ajuste a la distribución t\n")
+cat("• Errores pequeños indican que los momentos coinciden\n")
+
+# ============================================================================
+# DEMOSTRACIÓN GRÁFICA DE LA RELACIÓN
+# ============================================================================
+
+cat("\n======================================================================\n")
+cat("DEMOSTRACIÓN GRÁFICA DE LA RELACIÓN\n")
+cat("======================================================================\n")
+
+# Gráfico adicional: Dispersión de X vs Y y cómo se relacionan con T
+par(mfrow = c(2, 2))
+
+# 1. Dispersión X vs Y
+plot(X, Y, pch = 19, cex = 0.5, col = rgb(0, 0, 1, 0.3),
+     main = "Dispersión: X vs Y",
+     xlab = "X ~ N(0,1)", ylab = paste("Y ~ χ²(", n, ")", sep = ""))
+
+# Agregar líneas de referencia
+abline(v = 0, col = "red", lwd = 1, lty = 2)
+abline(h = n, col = "red", lwd = 1, lty = 2)
+
+# 2. Dispersión Y vs T
+plot(Y, T_calculada, pch = 19, cex = 0.5, col = rgb(0.5, 0, 0.5, 0.3),
+     main = "Dispersión: Y vs T",
+     xlab = paste("Y ~ χ²(", n, ")", sep = ""), ylab = "T = X/√(Y/n)")
+
+# Curva teórica: para un valor fijo de Y, T ~ N(0, sqrt(n/Y))
+y_vals <- seq(quantile(Y, 0.05), quantile(Y, 0.95), length.out = 10)
+for (y_val in y_vals) {
+  t_range <- seq(-3, 3, length.out = 100)
+  lines(rep(y_val, 100), t_range, col = "gray", lwd = 0.5)
+}
+
+# 3. Densidad condicional
+# Para un rango específico de Y, ver la distribución de T
+y_low <- quantile(Y, 0.25)
+y_high <- quantile(Y, 0.75)
+
+indices_bajo <- which(Y >= y_low & Y <= y_low * 1.5)
+indices_alto <- which(Y >= y_high * 0.8 & Y <= y_high)
+
+plot(density(T_calculada[indices_bajo]), col = "blue", lwd = 2,
+     main = "Densidad de T condicional a Y",
+     xlab = "T", ylab = "Densidad",
+     xlim = c(-4, 4), ylim = c(0, 0.5))
+lines(density(T_calculada[indices_alto]), col = "red", lwd = 2)
+
+# Densidad teórica t(n) para comparación
+lines(x_t, dt(x_t, df = n), col = "black", lwd = 2, lty = 2)
+
+legend("topright",
+       legend = c(paste("Y ≈ ", round(y_low, 1), " (bajo)", sep = ""),
+                  paste("Y ≈ ", round(y_high, 1), " (alto)", sep = ""),
+                  paste("t(", n, ") teórica", sep = "")),
+       col = c("blue", "red", "black"),
+       lwd = 2, lty = c(1, 1, 2))
+
+# 4. Convergencia a la normal cuando n aumenta
+n_grande <- 50
+X_grande <- rnorm(num_sim)
+Y_grande <- rchisq(num_sim, df = n_grande)
+T_grande <- X_grande / sqrt(Y_grande/n_grande)
+
+plot(density(T_grande), col = "blue", lwd = 3,
+     main = paste("Convergencia a la normal (n = ", n_grande, ")", sep = ""),
+     xlab = "T", ylab = "Densidad",
+     xlim = c(-4, 4), ylim = c(0, 0.45))
+lines(x_norm, dnorm(x_norm), col = "red", lwd = 2, lty = 2)
+lines(x_t, dt(x_t, df = n), col = "green", lwd = 2, lty = 3)
+
+legend("topright",
+       legend = c(paste("t(", n_grande, ") empírica", sep = ""),
+                  "N(0,1) teórica",
+                  paste("t(", n, ") teórica para comparación", sep = "")),
+       col = c("blue", "red", "green"),
+       lwd = c(3, 2, 2),
+       lty = c(1, 2, 3))
+
+par(mfrow = c(1, 1))
+
+# ============================================================================
+# CONCLUSIÓN FINAL
+# ============================================================================
+
+cat("\n======================================================================\n")
+cat("CONCLUSIÓN FINAL\n")
+cat("======================================================================\n")
+
+cat("Se ha verificado empíricamente la relación:\n")
+cat("  Si X ~ N(0,1) y Y ~ χ²(n) son independientes, entonces\n")
+cat("  T = X / √(Y/n) ~ t(n)\n\n")
+
+cat("RESULTADOS PRINCIPALES para n = ", n, ":\n", sep = "")
+cat("1. La distribución de T calculada coincide con t(", n, ") teórica\n", sep = "")
+cat("2. Prueba KS: p-value = ", round(ks_test$p.value, 4), 
+    ifelse(ks_test$p.value > 0.05, " (no se rechaza H0) ✓", " (se rechaza H0) ✗"), "\n", sep = "")
+cat("3. La media muestral de T es ", round(mean(T_calculada), 4), 
+    " (teórica: 0)\n", sep = "")
+if (n > 2) {
+  cat("4. La varianza muestral de T es ", round(var(T_calculada), 4), 
+      " (teórica: ", round(n/(n-2), 4), ")\n", sep = "")
+}
+cat("5. T tiene colas más pesadas que N(0,1), como se espera\n\n")
+
+cat("IMPLICACIONES ESTADÍSTICAS:\n")
+cat("• Esta relación explica por qué la distribución t aparece en inferencia\n")
+cat("• En pruebas t, el estadístico tiene esta forma cuando σ es desconocida\n")
+cat("• Para n grande, t(n) ≈ N(0,1) (teorema del límite central)\n")
+cat("• Para n pequeño, las colas de t son más pesadas que las de la normal\n\n")
+
+cat("APLICACIONES PRÁCTICAS:\n")
+cat("1. Pruebas t para una muestra: t = (x̄ - μ) / (s/√n)\n")
+cat("2. Pruebas t para dos muestras independientes\n")
+cat("3. Intervalos de confianza cuando la varianza es desconocida\n")
+cat("4. Regresión lineal (distribución de los coeficientes estimados)\n")
+
+cat("\nLIMITACIONES Y SUPUESTOS:\n")
+cat("• X e Y deben ser independientes\n")
+cat("• X debe seguir exactamente N(0,1)\n")
+cat("• Y debe seguir exactamente χ²(n)\n")
+cat("• En la práctica, estos supuestos se relajan con muestras grandes\n")
+```
+
+
+
+:::
+
+---
+
+Genera una muestra aleatoria de de tamaño 1000 para $X\sim N(0,1)$ y $Y\sim \chi^2(10)$. Calcula la variable aleatoria $T$ y compara su histograma con la función de densidad teórica de $t(10)$.
+
+:::
+
+
+::: {#exr-n_normales}
+
+
+::: {#prp-n_normal}
+
+```{r}
+# ============================================
+# Comparación empírica de la distribución t-Student
+# Generación de T = X / sqrt(Y/10)
+# con X ~ N(0,1) y Y ~ chi^2(10)
+# ============================================
+
+# Configuración inicial
+set.seed(123)  # Para reproducibilidad
+n <- 1000      # Tamaño de la muestra
+
+# ============================================
+# 1. Generar las muestras
+# ============================================
+# X sigue una distribución normal estándar N(0,1)
+X <- rnorm(n, mean = 0, sd = 1)
+
+# Y sigue una distribución chi-cuadrado con 10 grados de libertad
+Y <- rchisq(n, df = 10)
+
+# ============================================
+# 2. Calcular la variable T
+# ============================================
+# T = X / sqrt(Y/10)
+T_vals <- X / sqrt(Y/10)
+
+# ============================================
+# 3. Comparar histograma con densidad teórica
+# ============================================
+# Crear un histograma de los valores de T
+hist(T_vals, 
+     breaks = 30, 
+     freq = FALSE,  # Para mostrar densidad, no frecuencia
+     col = "lightblue",
+     border = "white",
+     main = "Histograma de T vs. Densidad t(10)",
+     xlab = "Valores de T",
+     ylab = "Densidad",
+     xlim = c(-5, 5))  # Ajustar límites para mejor visualización
+
+# Superponer la función de densidad teórica de t(10)
+curve(dt(x, df = 10), 
+      from = -5, to = 5, 
+      col = "red", 
+      lwd = 2, 
+      add = TRUE)
+
+# Añadir una leyenda
+legend("topright", 
+       legend = c("Histograma (T)", "Densidad t(10) teórica"),
+       col = c("lightblue", "red"),
+       lwd = c(5, 2),
+       bty = "n")
+
+# ============================================
+# 4. Prueba de bondad de ajuste (opcional)
+# ============================================
+# Test de Kolmogorov-Smirnov para comparar con t(10)
+ks_test <- ks.test(T_vals, "pt", df = 10)
+print(ks_test)
+
+# ============================================
+# 5. Resumen estadístico
+# ============================================
+cat("\n====================================\n")
+cat("Resumen estadístico de T:\n")
+cat("====================================\n")
+cat("Media muestral:", mean(T_vals), "\n")
+cat("Desviación estándar muestral:", sd(T_vals), "\n")
+cat("Mínimo:", min(T_vals), "\n")
+cat("Máximo:", max(T_vals), "\n")
+cat("====================================\n")
+```
+
+
+
+
+
+Sean $X_1,X_2,\ldots,X_n$ variables aleatorias independientes e idénticamente distribuidas como $N(\mu,\sigma^2)$. Entonces la variable aleatoria:
+
+$$T= \frac{\overline{X}-\mu}{S/\sqrt{n}}\sim t(n-1)$$
+
+en donde $\overline{X}=\frac{1}{n}\sum_{i=1}^n X_i$ y $S^2=\frac{1}{n-1}\sum_{i=1}^n (X_i-\overline{X})^2$.
+
+
+:::
+
+---
+
+Genera 1000 muestras aleatorias de tamaño 10 de una distribución normal estándar. Para cada muestra calcula la media muestral y la desviación estándar muestral. Luego calcula la variable aleatoria $T$ y compara su histograma con la función de densidad teórica de $t(9)$.
+
+
+
+
+
+```{r}
+# =============================================================================
+# Simulación de la distribución t de Student a partir de muestras normales
+# T = (X̄ - μ) / (S/√n)  ~  t(n-1)
+# =============================================================================
+
+# Configuración inicial
+set.seed(123)                    # Para reproducibilidad
+num_muestras <- 1000             # Número de muestras a generar
+n <- 10                          # Tamaño de cada muestra
+mu <- 0                          # Media poblacional (normal estándar)
+df_t <- n - 1                    # Grados de libertad = 9
+
+# =============================================================================
+# 1. Generación de muestras y cálculo de estadísticos
+# =============================================================================
+# Matriz: filas = muestras, columnas = observaciones
+muestras <- matrix(rnorm(num_muestras * n, mean = mu, sd = 1), 
+                   nrow = num_muestras, 
+                   ncol = n)
+
+# Calcular para cada muestra:
+#   media muestral (X̄)
+#   desviación estándar muestral (S)
+#   estadístico T
+medias_muestrales <- apply(muestras, 1, mean)
+desv_est_muestral <- apply(muestras, 1, sd)
+
+# Cálculo del estadístico T = (X̄ - μ) / (S/√n)
+T_vals <- (medias_muestrales - mu) / (desv_est_muestral / sqrt(n))
+
+# =============================================================================
+# 2. Comparación gráfica: histograma vs densidad teórica t(9)
+# =============================================================================
+# Configurar área de gráfico (1 fila, 2 columnas)
+par(mfrow = c(1, 2))
+
+# ---- Panel izquierdo: Histograma vs densidad teórica ----
+hist(T_vals, 
+     breaks = 30, 
+     freq = FALSE,                 # Densidad, no frecuencia
+     col = "lightblue",
+     border = "white",
+     main = paste("Distribución empírica de T\n vs t(", df_t, ")", sep = ""),
+     xlab = expression(T == (bar(X) - mu) / (S / sqrt(n))),
+     ylab = "Densidad",
+     xlim = c(-5, 5),
+     ylim = c(0, 0.4))
+
+# Superponer densidad teórica t(9)
+curve(dt(x, df = df_t), 
+      from = -5, to = 5, 
+      col = "red", 
+      lwd = 2.5, 
+      add = TRUE)
+
+# Superponer densidad normal estándar (para comparación)
+curve(dnorm(x), 
+      from = -5, to = 5, 
+      col = "darkgreen", 
+      lty = 2, 
+      lwd = 2, 
+      add = TRUE)
+
+# Leyenda
+legend("topright", 
+       legend = c(paste("Empírico (T, n=", n, ")", sep = ""), 
+                  paste("Teórico t(", df_t, ")", sep = ""), 
+                  "N(0,1)"),
+       col = c("lightblue", "red", "darkgreen"),
+       lwd = c(5, 2.5, 2),
+       lty = c(1, 1, 2),
+       bty = "n")
+
+# ---- Panel derecho: Gráfico Q-Q para verificar la distribución ----
+qqplot(T_vals, rt(1000, df = df_t),
+       main = paste("Gráfico Q-Q vs t(", df_t, ")", sep = ""),
+       xlab = "Cuantiles muestrales",
+       ylab = paste("Cuantiles teóricos t(", df_t, ")", sep = ""),
+       pch = 19, cex = 0.6, col = rgb(0, 0, 1, 0.5))
+abline(0, 1, col = "red", lwd = 2)  # Línea y=x
+
+# Restaurar configuración gráfica
+par(mfrow = c(1, 1))
+
+# =============================================================================
+# 3. Pruebas de bondad de ajuste
+# =============================================================================
+cat("===========================================================\n")
+cat("RESULTADOS DE LA SIMULACIÓN\n")
+cat("===========================================================\n")
+cat("Número de muestras:", num_muestras, "\n")
+cat("Tamaño de cada muestra (n):", n, "\n")
+cat("Grados de libertad (n-1):", df_t, "\n\n")
+
+# Test de Kolmogorov-Smirnov
+ks_test <- ks.test(T_vals, "pt", df = df_t)
+cat("Prueba de Kolmogorov-Smirnov:\n")
+cat("  Estadístico D =", round(ks_test$statistic, 4), "\n")
+cat("  p-valor =", round(ks_test$p.value, 4), "\n")
+if (ks_test$p.value > 0.05) {
+  cat("  Conclusión: No se rechaza que T ~ t(", df_t, ")\n", sep = "")
+} else {
+  cat("  Conclusión: Se rechaza que T ~ t(", df_t, ")\n", sep = "")
+}
+cat("\n")
+
+# Test de Shapiro-Wilk (normalidad)
+shapiro_test <- shapiro.test(T_vals)
+cat("Prueba de Shapiro-Wilk (normalidad):\n")
+cat("  p-valor =", round(shapiro_test$p.value, 4), "\n")
+if (shapiro_test$p.value > 0.05) {
+  cat("  Conclusión: No se rechaza normalidad\n")
+} else {
+  cat("  Conclusión: Se rechaza normalidad (esperado para t con pocos gl)\n")
+}
+cat("\n")
+
+# =============================================================================
+# 4. Estadísticos descriptivos
+# =============================================================================
+cat("Estadísticos descriptivos de T:\n")
+cat("  Media muestral =", round(mean(T_vals), 4), 
+    " (Teórica = 0)\n")
+cat("  Desviación estándar =", round(sd(T_vals), 4), 
+    " (Teórica =", round(sqrt(df_t/(df_t-2)), 4), "para gl>2)\n")
+cat("  Mínimo =", round(min(T_vals), 4), "\n")
+cat("  Máximo =", round(max(T_vals), 4), "\n")
+cat("  Asimetría =", round(mean(scale(T_vals)^3), 4), 
+    " (Teórica = 0)\n")
+cat("  Curtosis =", round(mean(scale(T_vals)^4) - 3, 4), 
+    " (Teórica > 0 para t con pocos gl)\n")
+cat("===========================================================\n")
+
+# =============================================================================
+# 5. Comparación con la versión que usa σ conocida (Z)
+# =============================================================================
+# Solo para referencia: distribución de Z = (X̄ - μ) / (σ/√n) ~ N(0,1)
+Z_vals <- (medias_muestrales - mu) / (1 / sqrt(n))  # σ = 1
+
+cat("\nComparación con distribución Z (σ conocida):\n")
+cat("  Varianza de T:", round(var(T_vals), 4), "\n")
+cat("  Varianza de Z:", round(var(Z_vals), 4), " (esperado ≈ 1)\n")
+cat("  Varianza teórica t(9) para n>2:", round(df_t/(df_t-2), 4), "\n")
+cat("  La distribución t tiene colas más pesadas que la normal.\n")
+```
+
+
+
+:::

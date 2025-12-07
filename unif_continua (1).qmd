@@ -1,0 +1,1500 @@
+---
+title: "Distribución Uniforme Continua"
+lang: es
+---
+
+```{=html}
+<style>
+main.content {
+text-align: justify}
+</style>
+```
+
+```{r}
+#| include: false
+#| label: setup
+
+library(ggplot2)
+library(dplyr)
+library(knitr)
+library(kableExtra)
+library(plotly)
+
+```
+
+La **distribución uniforme continua** es una de las distribuciones de probabilidad más fundamentales en la teoría estadística. Se caracteriza por asignar la misma probabilidad a todos los valores dentro de un intervalo específico, de ahí su nombre *uniforme*.
+
+Una variable aleatoria $X$ sigue una distribución uniforme continua en el intervalo $[a, b]$ si todos los subintervalos de igual longitud dentro de $[a, b]$ tienen la misma probabilidad de contener el valor de $X$.
+
+::: {#def-unif_cont}
+Decimos que una variable aleatoria $X$ tiene una distribución uniforme continua en el intervalo $[a, b]$, y escribimos $X\sim unif(a,b)$, si su función de densidad de probabilidad es constante en dicho intervalo y cero fuera de él, es decir:
+
+\begin{equation}
+f(x) = \begin{cases}
+\frac{1}{b-a} & \text{si } a \leq x \leq b \\
+0 & \text{en otro caso}
+\end{cases}
+\end{equation}
+
+Los parámetros de la distribución son:
+
+-   $a$ es el **límite inferior** del intervalo (parámetro de localización)
+-   $b$ es el **límite superior** del intervalo (parámetro de escala)
+-   Se debe cumplir que $a < b$
+:::
+
+------------------------------------------------------------------------
+
+Nótese que la función de densidad de probabilidad cumple con las siguientes propiedades fundamentales:
+
+1.  **No negatividad**: $f(x) \geq 0$ para todo $x \in \mathbb{R}$
+2.  **Normalización**: $\int_{-\infty}^{\infty} f(x) dx = 1$
+
+## Propiedades de la Función de Densidad de Probabilidad (PDF)
+
+**Representación Gráfica**
+
+La función de densidad de probabilidad tiene forma rectangular, de ahí que a veces se le llame *distribución rectangular*. A continuación se presentan gráficos de la función de densidad de probabilidad para diferentes parámetros.
+
+```{r}
+#| label: pdf-grafico
+
+# Parámetros de ejemplo
+a1 <- 1
+b1 <- 4
+a2 <- 0
+b2 <- 6
+a3 <- -2
+b3 <- 2
+
+# Crear datos para las gráficas
+x_range <- seq(-3, 7, length.out = 1000)
+
+
+# Crear dataframe para ggplot
+df_pdf <- data.frame(
+  x = rep(x_range, 3),
+  d_prob = c(dunif(x_range, min = a1, max = b1),
+        dunif(x_range, min = a2, max = b2),
+        dunif(x_range, min = a3, max = b3)),
+  Distribucion = rep(c("unif(1,4)", "unif(0,6)", "unif(-2,2)"), each = length(x_range))
+)
+
+pdf_graf <- ggplot(df_pdf) +
+  geom_line(aes(x = x, y = d_prob, color = Distribucion), linewidth = 1.5) +
+  labs(title = "PDF - Distribución Uniforme",
+       x = "x", y = "f(x)",
+       color = "Distribución") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, size = 14),
+        legend.position = "top") +
+  scale_color_manual(values = c("firebrick", "dodgerblue2", "darkolivegreen"))
+
+
+ggplotly(pdf_graf)
+```
+
+**Altura de la Función**
+
+La altura de la función de densidad es inversamente proporcional a la longitud del intervalo:
+
+-   **Altura**: $h = \frac{1}{b-a}$
+-   **Base**: $\text{longitud} = b - a$
+-   **Área**: $h \times \text{longitud} = \frac{1}{b-a} \times (b-a) = 1$
+
+```{r}
+#| label: tabla-propiedades
+# Tabla de propiedades para diferentes distribuciones uniformes
+distribuciones <- data.frame(
+  Distribucion = c("unif(0,1)", "unif(1,4)", "unif(-2,2)", "unif(0,10)"),
+  a = c(0, 1, -2, 0),
+  b = c(1, 4, 2, 10),
+  Longitud = c(1, 3, 4, 10),
+  Altura = c(1, 1/3, 1/4, 1/10)
+)
+
+kable(distribuciones, 
+      caption = "Propiedades de diferentes distribuciones uniformes",
+      digits = 4) |> 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+<br>
+
+**Continuidad y Diferenciabilidad**
+
+La función de densidad uniforme es:
+
+-   **Continua** en el interior del intervalo $(a, b)$
+-   **Discontinua** en los puntos $x = a$ y $x = b$
+-   **No diferenciable** en los puntos de discontinuidad
+
+## Función de Distribución (CDF, Probabilidad Acumulada)
+
+::: {#def-cdf_unif}
+La función de distribución acumulativa (CDF) de una distribución uniforme continua $unif(a, b)$ está definida como:
+
+\begin{equation}
+F(x) = P(X \leq x) = \begin{cases} 
+0 & \text{si } x < a \\
+\frac{x-a}{b-a} & \text{si } a \leq x \leq b \\
+1 & \text{si } x > b
+\end{cases}
+\end{equation}
+:::
+
+------------------------------------------------------------------------
+
+Para $x \in [a, b]$, la función de distribución se obtiene integrando la función de densidad:
+
+\begin{equation}
+F(x) = \int_{-\infty}^{x} f(t) dt = \int_{a}^{x} \frac{1}{b-a} dt = \frac{1}{b-a} \int_{a}^{x} dt = \frac{1}{b-a}(x-a) = \frac{x-a}{b-a}
+\end{equation}
+
+**Interpretación Geométrica**
+
+Recordemos que la función de distribución representa la **proporción del intervalo total** que se encuentra a la izquierda del valor $x$:
+
+-   Cuando $x = a$: $F(a) = \frac{a-a}{b-a} = 0$
+-   Cuando $x = b$: $F(b) = \frac{b-a}{b-a} = 1$
+-   Para cualquier $x \in (a,b)$: $F(x) = \frac{x-a}{b-a}$ es la proporción lineal
+
+**Representación Gráfica**
+
+```{r}
+#| label: cdf-grafico
+
+# Crear dataframe para las CDF
+df_cdf <- data.frame(
+  x = rep(x_range, 3),
+  y = c(punif(x_range, a1, b1),
+        punif(x_range, a2, b2),
+        punif(x_range, a3, b3)),
+  Distribucion = rep(c("unif(1,4)", "unif(0,6)", "unif(-2,2)"), each = length(x_range))
+)
+
+cdf_graf <- ggplot(df_cdf) +
+  geom_line(aes(x = x, y = y, color = Distribucion), linewidth = 1.5) +
+  labs(title = "CDF's - Distribución Uniforme",
+       x = "x", y = "F(x) = P(X ≤ x)",
+       color = "Distribución") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, size = 14),
+        legend.position = "top") +
+  scale_color_manual(values = c("firebrick", "dodgerblue2", "darkolivegreen")) +
+  geom_hline(yintercept = c(0, 1), linetype = "dashed", alpha = 0.5)
+
+ggplotly(cdf_graf)
+```
+
+**Propiedades Fundamentales de la Función de Distribución**
+
+La función de distribución uniforme cumple con todas las propiedades de una CDF:
+
+1.  **Monótona no decreciente**: $F(x_1) \leq F(x_2)$ si $x_1 \leq x_2$
+2.  **Continua por la derecha**: $\lim_{h \to 0^+} F(x+h) = F(x)$
+3.  **Límites**: $\lim_{x \to -\infty} F(x) = 0$ y $\lim_{x \to \infty} F(x) = 1$
+
+**Cálculo de Probabilidades**
+
+La función de distribución permite calcular probabilidades de intervalos:
+
+$$P(c \leq X \leq d) = F(d) - F(c)$$
+
+Para la distribución uniforme, si $a \leq c \leq d \leq b$:
+
+$$P(c \leq X \leq d) = \frac{d-a}{b-a} - \frac{c-a}{b-a} = \frac{d-c}{b-a}$$
+
+Por ejemplo, para $X \sim unif(0, 10)$, la probabilidad de que $X$ esté entre 2 y 6 es:
+
+```{r}
+#| label: ejemplo-probabilidades
+
+# Ejemplo: unif(0,10), calcular P(3 ≤ X ≤ 7)
+a_ej <- 0; b_ej <- 10
+c_ej <- 2; d_ej <- 6
+
+prob_ejemplo <- punif(d_ej, min = a_ej, max= b_ej) - punif(c_ej, min = a_ej, max= b_ej)   
+
+# Visualización del cálculo de probabilidad
+x_ejemplo <- seq(-1, 11, length.out = 1000)
+pdf_ejemplo <- dunif(x_ejemplo, a_ej, b_ej)
+
+df_ejemplo <- data.frame(x = x_ejemplo, y = pdf_ejemplo)
+
+ggplot(df_ejemplo, aes(x = x, y = y)) +
+  geom_line(linewidth = 2, color = "blue") +
+  geom_area(data = filter(df_ejemplo, x >= c_ej & x <= d_ej), 
+            alpha = 0.5, fill = "red") +
+  geom_vline(xintercept = c(c_ej, d_ej), linetype = "dashed", color = "red") +
+  scale_x_continuous(breaks = seq(0, 10, by = 2)) +
+  labs(title = paste0("P(2 ≤ X ≤ 6) = ", prob_ejemplo, " para unif(0,10)"),
+       x = "x", y = "f(x)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, size = 12)) +
+  annotate("text", x = 4, y = 0.05, 
+           label = paste0("Área = ", prob_ejemplo), size = 5)
+```
+
+## Parámetros y Medidas Descriptivas
+
+### Parámetros de la Distribución
+
+La distribución uniforme continua $unif(a, b)$ está completamente caracterizada por dos parámetros:
+
+-   $a$ (límite inferior): Parámetro de localización que determina el inicio del soporte
+-   $b$ (límite superior): Parámetro que, junto con $a$, determina la escala y el final del soporte
+-   **Restricción**: Debe cumplirse que $a < b$
+
+### Medidas de Tendencia Central
+
+**Media (Esperanza)**
+
+\begin{eqnarray}
+\mu = E(X) & = & \int_{a}^{b} x \cdot \frac{1}{b-a} dx = \frac{1}{b-a} \int_{a}^{b} x dx\\
+           & = & \frac{1}{b-a} \cdot \frac{x^2}{2}\Big|_a^b = \frac{1}{b-a} \cdot \frac{b^2-a^2}{2} = \frac{(b-a)(b+a)}{2(b-a)} = \frac{a+b}{2}
+\end{eqnarray}
+
+Luego,
+
+$$\mu = \frac{a+b}{2}$$
+
+La media es exactamente el **punto medio** del intervalo $[a, b]$.
+
+<br>
+
+**Mediana**
+
+Para la distribución uniforme, la mediana $M$ satisface $P(X \leq M) = 0.5$:
+
+$$F(M) = \frac{M-a}{b-a} = 0.5$$
+
+$$M-a = \frac{b-a}{2} \Rightarrow M = a + \frac{b-a}{2} = \frac{a+b}{2}$$
+
+Por lo tanto, la mediana coincide con la media:
+
+$$\text{Mediana} = \frac{a+b}{2}$$
+
+### Medidas de Dispersión
+
+**Varianza**
+
+La varianza se calcula como $\text{Var}(X) = E(X^2) - (E[X])^2$.
+
+Primero calculamos $E(X^2)$:
+
+\begin{eqnarray}
+E(X^2) & = & \int_{a}^{b} x^2 \cdot \frac{1}{b-a} dx = \frac{1}{b-a} \int_{a}^{b} x^2 dx = \frac{1}{b-a} \cdot \frac{x^3}{3}\Big|_a^b\\
+       & = & \frac{1}{b-a} \cdot \frac{b^3-a^3}{3} = \frac{b^3-a^3}{3(b-a)}
+\end{eqnarray}
+
+Usando la identidad $b^3-a^3 = (b-a)(b^2+ab+a^2)$:
+
+$$E(X^2) = \frac{(b-a)(b^2+ab+a^2)}{3(b-a)} = \frac{b^2+ab+a^2}{3}$$
+
+Por lo tanto:
+
+$$\text{Var}(X) = \frac{b^2+ab+a^2}{3} - \left(\frac{a+b}{2}\right)^2$$
+
+Simplificando, tenemos
+
+$$\text{Var}(X) = \frac{(b-a)^2}{12}$$
+
+<br>
+
+**Desviación Estándar**
+
+$$\sigma = \sqrt{\text{Var}(X)} = \frac{b-a}{\sqrt{12}} = \frac{b-a}{2\sqrt{3}}$$
+
+## Simulación y Comparación con Parámetros Teóricos
+
+Consideremos una distribución $unif(2, 8)$ y generemos diferentes tamaños de muestra:
+
+```{r simulacion-basica}
+# Parámetros de la distribución U(2, 8)
+a <- 2
+b <- 8
+
+# Parámetros teóricos
+media_teorica <- (a + b) / 2
+varianza_teorica <- (b - a)^2 / 12
+desv_std_teorica <- sqrt(varianza_teorica)
+
+# Tamaños de muestra a evaluar
+tamaños <- c(100, 500, 1000, 5000, 10000)
+
+# Función para simular y calcular estadísticos
+simular_uniforme <- function(n, a, b) {
+  muestra <- runif(n, min = a, max = b)
+  
+  return(data.frame(
+    n = n,
+    media_muestral = mean(muestra),
+    varianza_muestral = var(muestra),
+    desv_std_muestral = sd(muestra),
+    minimo = min(muestra),
+    maximo = max(muestra)
+  ))
+}
+
+# Realizar simulaciones
+resultados_sim <- do.call(rbind, lapply(tamaños, simular_uniforme, a = a, b = b))
+
+# Agregar valores teóricos para comparación
+resultados_sim$media_teorica <- media_teorica
+resultados_sim$varianza_teorica <- varianza_teorica
+resultados_sim$desv_std_teorica <- desv_std_teorica
+
+# Mostrar resultados
+kable(resultados_sim, 
+      caption = "Comparación de estadísticos muestrales vs teóricos para U(2,8)",
+      digits = 4) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+**Visualización de la Convergencia**
+
+```{r convergencia-visual}
+# Generar una secuencia larga para observar convergencia
+n_total <- 10000
+muestra_larga <- runif(n_total, min = a, max = b)
+
+# Calcular medias acumuladas
+indices <- 1:n_total
+medias_acumuladas <- cumsum(muestra_larga) / indices
+
+# Crear dataframe para gráfico
+df_convergencia <- data.frame(
+  n = indices,
+  media_acumulada = medias_acumuladas,
+  media_teorica = media_teorica
+)
+
+# Gráfico de convergencia de la media
+ggplot(df_convergencia, aes(x = n)) +
+  geom_line(aes(y = media_acumulada), color = "blue", alpha = 0.7) +
+  geom_hline(aes(yintercept = media_teorica), color = "red", linetype = "dashed", linewidth = 1) +
+  labs(title = "Convergencia de la Media Muestral hacia la Media Teórica",
+       subtitle = "Distribución U(2,8) - Ley de los Grandes Números",
+       x = "Tamaño de muestra (n)",
+       y = "Media acumulada",
+       caption = "Línea roja: Media teórica = 5") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+**Histograma vs Densidad Teórica**
+
+```{r histograma-densidad}
+#| warning: false
+# Generar muestra grande para el histograma
+muestra_hist <- runif(5000, min = a, max = b)
+
+# Crear histograma
+ggplot(data.frame(x = muestra_hist), aes(x = x)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 30, 
+                 fill = "lightblue", color = "black", alpha = 0.7) +
+  geom_hline(yintercept = 1/(b-a), color = "red", size = 2, linetype = "dashed") +
+  labs(title = "Histograma de Muestra vs Densidad Teórica",
+       subtitle = "5000 observaciones de unif(2,8)",
+       x = "Valores",
+       y = "Densidad",
+       caption = "Línea roja: Densidad teórica = 1/6 ≈ 0.167") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5)) +
+  xlim(1.5, 8.5)
+```
+
+## Ejemplos Prácticos
+
+::: {#exm-semaforo}
+### Tiempo de Espera en Semáforo
+
+Un semáforo tiene un ciclo de 60 segundos, donde 25 segundos está en verde y 35 segundos en rojo. Si llegamos al semáforo en un momento aleatorio durante la fase roja, el tiempo de espera sigue una distribución uniforme.
+
+```{r ejemplo-semaforo}
+# Parámetros del problema
+tiempo_rojo <- 35  # segundos
+a_semaforo <- 0
+b_semaforo <- tiempo_rojo
+
+# Simular 1000 llegadas aleatorias durante fase roja
+n_llegadas <- 1000
+tiempos_espera <- runif(n_llegadas, min = a_semaforo, max = b_semaforo)
+
+# Calcular estadísticos
+tiempo_promedio <- mean(tiempos_espera)
+tiempo_teorico <- (a_semaforo + b_semaforo) / 2
+
+# Probabilidad de esperar menos de 10 segundos
+prob_menos_10 <- mean(tiempos_espera < 10)
+prob_teorica_menos_10 <- (10 - a_semaforo) / (b_semaforo - a_semaforo)
+
+# Resultados
+cat("=== ANÁLISIS DE TIEMPO DE ESPERA EN SEMÁFORO ===\n")
+cat("Tiempo de espera promedio (simulado):", round(tiempo_promedio, 2), "segundos\n")
+cat("Tiempo de espera teórico:", tiempo_teorico, "segundos\n")
+cat("Probabilidad de esperar < 10 seg (simulada):", round(prob_menos_10, 3), "\n")
+cat("Probabilidad teórica de esperar < 10 seg:", round(prob_teorica_menos_10, 3), "\n")
+
+# Visualización
+ggplot(data.frame(tiempo = tiempos_espera), aes(x = tiempo)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 20, 
+                 fill = "orange", color = "black", alpha = 0.7) +
+  geom_vline(xintercept = tiempo_teorico, color = "red", size = 1, linetype = "dashed") +
+  geom_vline(xintercept = 10, color = "blue", size = 1, linetype = "dotted") +
+  labs(title = "Distribución de Tiempos de Espera en Semáforo",
+       x = "Tiempo de espera (segundos)",
+       y = "Densidad",
+       caption = "Línea roja: Media teórica | Línea azul: 10 segundos") +
+  theme_minimal()
+```
+:::
+
+::: {#exm-manufactura}
+### Control de Calidad en Manufactura
+
+En una línea de producción, el diámetro de las piezas debe estar entre 19.8 mm y 20.2 mm. Si el proceso está bien calibrado, los diámetros siguen una distribución uniforme en este rango.
+
+```{r ejemplo-manufactura}
+# Parámetros del proceso
+diametro_min <- 19.8  # mm
+diametro_max <- 20.2  # mm
+diametro_objetivo <- 20.0  # mm
+
+# Simular producción de 2000 piezas
+n_piezas <- 2000
+diametros <- runif(n_piezas, min = diametro_min, max = diametro_max)
+
+# Análisis de calidad
+tolerancia <- 0.1  # ±0.1 mm del objetivo
+piezas_en_tolerancia <- sum(abs(diametros - diametro_objetivo) <= tolerancia)
+porcentaje_calidad <- (piezas_en_tolerancia / n_piezas) * 100
+
+# Cálculo teórico de calidad
+limite_inf_tolerancia <- diametro_objetivo - tolerancia
+limite_sup_tolerancia <- diametro_objetivo + tolerancia
+porcentaje_teorico <- ((limite_sup_tolerancia - limite_inf_tolerancia) / 
+                      (diametro_max - diametro_min)) * 100
+
+# Estadísticos del proceso
+promedio_diametro <- mean(diametros)
+desviacion_diametro <- sd(diametros)
+
+# Resultados
+cat("=== ANÁLISIS DE CONTROL DE CALIDAD ===\n")
+cat("Diámetro promedio:", round(promedio_diametro, 4), "mm\n")
+cat("Desviación estándar:", round(desviacion_diametro, 4), "mm\n")
+cat("Piezas dentro de tolerancia:", piezas_en_tolerancia, "de", n_piezas, "\n")
+cat("Porcentaje de calidad (simulado):", round(porcentaje_calidad, 1), "%\n")
+cat("Porcentaje teórico de calidad:", round(porcentaje_teorico, 1), "%\n")
+
+# Visualización del control de calidad
+ggplot(data.frame(diametro = diametros), aes(x = diametro)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 25, 
+                 fill = "lightgreen", color = "black", alpha = 0.7) +
+  geom_vline(xintercept = diametro_objetivo, color = "red", size = 1) +
+  geom_vline(xintercept = c(limite_inf_tolerancia, limite_sup_tolerancia), 
+             color = "blue", size = 1, linetype = "dashed") +
+  annotate("rect", xmin = limite_inf_tolerancia, xmax = limite_sup_tolerancia,
+           ymin = 0, ymax = Inf, alpha = 0.2, fill = "green") +
+  labs(title = "Distribución de Diámetros en Control de Calidad",
+       x = "Diámetro (mm)",
+       y = "Densidad",
+       caption = "Zona verde: Tolerancia aceptable | Línea roja: Objetivo") +
+  theme_minimal()
+```
+:::
+
+------------------------------------------------------------------------
+
+## Verificación del Teorema Central del Límite
+
+El Teorema Central del Límite establece que las medias muestrales de cualquier distribución (con media y varianza finitas) se aproximan a una distribución normal cuando el tamaño de muestra es suficientemente grande.
+
+### Simulación con Diferentes Tamaños de Muestra
+
+```{r tcl-simulacion}
+# Parámetros de la distribución uniforme
+a_tcl <- 0
+b_tcl <- 10
+media_poblacional <- (a_tcl + b_tcl) / 2
+varianza_poblacional <- (b_tcl - a_tcl)^2 / 12
+
+# Diferentes tamaños de muestra
+tamaños_muestra <- c(5, 10, 30, 50, 100)
+num_muestras <- 1000  # Número de medias muestrales a generar
+
+# Función para generar medias muestrales
+generar_medias <- function(n, num_sim, a, b) {
+  medias <- replicate(num_sim, mean(runif(n, min = a, max = b)))
+  return(medias)
+}
+
+# Generar medias para cada tamaño de muestra
+resultados_tcl <- list()
+for (i in seq_along(tamaños_muestra)) {
+  n <- tamaños_muestra[i]
+  medias <- generar_medias(n, num_muestras, a_tcl, b_tcl)
+  
+  resultados_tcl[[i]] <- data.frame(
+    medias = medias,
+    n = n,
+    varianza_teorica_media = varianza_poblacional / n,
+    desv_std_teorica_media = sqrt(varianza_poblacional / n)
+  )
+}
+
+# Combinar resultados
+df_tcl <- do.call(rbind, resultados_tcl)
+df_tcl$n_factor <- factor(paste("n =", df_tcl$n))
+```
+
+### Visualización de la Normalización
+
+```{r tcl-visualizacion}
+# Gráfico de histogramas para diferentes tamaños de muestra
+ggplot(df_tcl, aes(x = medias)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 30, 
+                 fill = "lightblue", color = "black", alpha = 0.7) +
+  geom_vline(xintercept = media_poblacional, color = "red", size = 1, linetype = "dashed") +
+  facet_wrap(~n_factor, scales = "free_y", ncol = 3) +
+  labs(title = "Teorema Central del Límite - Distribución de Medias Muestrales",
+       subtitle = "Distribución U(0,10) con diferentes tamaños de muestra",
+       x = "Media muestral",
+       y = "Densidad") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+### Comparación de Varianzas
+
+```{r tcl-varianzas}
+# Calcular estadísticos para cada tamaño de muestra
+estadisticos_tcl <- df_tcl %>%
+  group_by(n) %>%
+  summarise(
+    media_observada = mean(medias),
+    varianza_observada = var(medias),
+    desv_std_observada = sd(medias),
+    varianza_teorica = first(varianza_teorica_media),
+    desv_std_teorica = first(desv_std_teorica_media),
+    .groups = 'drop'
+  )
+
+# Mostrar tabla de comparación
+kable(estadisticos_tcl, 
+      caption = "Comparación de varianzas teóricas vs observadas",
+      digits = 4) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+
+# Gráfico de convergencia de varianzas
+ggplot(estadisticos_tcl, aes(x = n)) +
+  geom_point(aes(y = varianza_observada, color = "Observada"), size = 3) +
+  geom_line(aes(y = varianza_observada, color = "Observada"), size = 1) +
+  geom_point(aes(y = varianza_teorica, color = "Teórica"), size = 3) +
+  geom_line(aes(y = varianza_teorica, color = "Teórica"), size = 1) +
+  scale_color_manual(values = c("Observada" = "blue", "Teórica" = "red")) +
+  labs(title = "Disminución de la Varianza de las Medias Muestrales",
+       subtitle = "Var(X̄) = σ²/n",
+       x = "Tamaño de muestra (n)",
+       y = "Varianza de las medias",
+       color = "Tipo") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+### Prueba de Normalidad de las Medias
+
+```{r tcl-normalidad}
+# Realizar pruebas de normalidad para n=100
+medias_n100 <- df_tcl[df_tcl$n == 100, "medias"]
+
+# Prueba de Shapiro-Wilk
+shapiro_test <- shapiro.test(medias_n100)
+
+# Q-Q plot para n=100
+ggplot(data.frame(medias = medias_n100), aes(sample = medias)) +
+  geom_qq() +
+  geom_qq_line(color = "red", size = 1) +
+  labs(title = "Q-Q Plot - Medias Muestrales (n=100)",
+       subtitle = paste("Prueba Shapiro-Wilk: W =", round(shapiro_test$statistic, 4), 
+                       ", p-valor =", round(shapiro_test$p.value, 4)),
+       x = "Cuantiles teóricos (Normal)",
+       y = "Cuantiles observados") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+## Ejercicios Propuestos
+
+::: {#exr-tiempo_carga}
+### Análisis de Tiempo de Carga
+
+El tiempo de carga de una página web sigue una distribución uniforme entre 2 y 8 segundos.
+
+1.  Crear un histograma de los tiempos de carga simulados (n=1000) y superponer la densidad teórica.
+2.  Cuál es el percentil 75 de los tiempos de carga?
+3.  ¿Cuál es la probabilidad de que una página cargue en menos de 4 segundos?
+
+
+```{r}
+# Ejercicios Propuestos - Análisis de Tiempo de Carga
+
+# 1. Crear histograma de tiempos de carga simulados (n=1000) 
+#    y superponer la densidad teórica
+
+# Parámetros de la distribución uniforme
+a <- 2  # límite inferior
+b <- 8  # límite superior
+n <- 1000  # número de simulaciones
+
+# Generar muestras de la distribución uniforme
+set.seed(123)  # Para reproducibilidad
+tiempos_carga <- runif(n, min = a, max = b)
+
+# Crear histograma
+hist(tiempos_carga, 
+     breaks = 30,  # Número de intervalos
+     freq = FALSE,  # Mostrar densidad en lugar de frecuencia
+     col = "lightblue",
+     border = "white",
+     main = "Distribución del Tiempo de Carga de Páginas Web",
+     xlab = "Tiempo de Carga (segundos)",
+     ylab = "Densidad",
+     xlim = c(1, 9))
+
+# Superponer la densidad teórica de la distribución uniforme
+curve(dunif(x, min = a, max = b), 
+      from = a, to = b, 
+      add = TRUE, 
+      col = "red", 
+      lwd = 2)
+
+# Agregar leyenda
+legend("topright", 
+       legend = c("Datos simulados", "Densidad teórica"),
+       fill = c("lightblue", NA),
+       border = c("white", NA),
+       lty = c(NA, 1),
+       col = c(NA, "red"),
+       lwd = c(NA, 2))
+
+# 2. Calcular el percentil 75 de los tiempos de carga
+percentil_75_teorico <- qunif(0.75, min = a, max = b)
+percentil_75_muestral <- quantile(tiempos_carga, 0.75)
+
+cat("Percentil 75 teórico:", percentil_75_teorico, "segundos\n")
+cat("Percentil 75 muestral:", percentil_75_muestral, "segundos\n")
+
+# 3. Calcular la probabilidad de que una página cargue en menos de 4 segundos
+prob_teorica <- punif(4, min = a, max = b)
+prob_muestral <- sum(tiempos_carga < 4) / n
+
+cat("\nProbabilidad teórica (tiempo < 4s):", prob_teorica, "\n")
+cat("Probabilidad muestral (tiempo < 4s):", prob_muestral, "\n")
+cat("Equivalente a:", round(prob_teorica * 100, 1), "%\n")
+
+# Visualización adicional: mostrar el área correspondiente a P(X < 4)
+hist(tiempos_carga, 
+     breaks = 30,
+     freq = FALSE,
+     col = "lightblue",
+     border = "white",
+     main = "Probabilidad de Carga en Menos de 4 Segundos",
+     xlab = "Tiempo de Carga (segundos)",
+     ylab = "Densidad",
+     xlim = c(1, 9))
+
+# Área correspondiente a P(X < 4)
+x_fill <- seq(a, 4, length.out = 100)
+y_fill <- dunif(x_fill, min = a, max = b)
+polygon(c(a, x_fill, 4), c(0, y_fill, 0), 
+        col = rgb(0, 0.5, 0.8, 0.5), 
+        border = NA)
+
+# Línea vertical en x = 4
+abline(v = 4, col = "darkblue", lwd = 2, lty = 2)
+
+# Curva teórica
+curve(dunif(x, min = a, max = b), 
+      from = a, to = b, 
+      add = TRUE, 
+      col = "red", 
+      lwd = 2)
+
+# Texto con la probabilidad
+text(6, 0.15, 
+     paste("P(X < 4) =", round(prob_teorica, 3)), 
+     col = "darkblue", cex = 1.1)
+
+legend("topright", 
+       legend = c("Densidad teórica", "P(X < 4)", "x = 4"),
+       col = c("red", rgb(0, 0.5, 0.8, 0.5), "darkblue"),
+       lty = c(1, NA, 2),
+       lwd = c(2, NA, 2),
+       fill = c(NA, rgb(0, 0.5, 0.8, 0.5), NA),
+       border = c(NA, "darkblue", NA))
+
+```
+
+
+
+:::
+
+------------------------------------------------------------------------
+
+::: {#exr-calificaciones}
+### Distribución de Calificaciones
+
+En un examen muy fácil, las calificaciones se distribuyen uniformemente entre 70 y 100 puntos.
+
+1.  Simular calificaciones de 500 estudiantes
+2.  ¿Qué porcentaje de estudiantes obtiene calificación superior a 85?
+3.  Crear categorías: Aprobado (70-79), Bien (80-89), Excelente (90-100) y calcular el porcentaje en cada categoría
+4.  Comparar con los porcentajes teóricos
+5.  Graficar la distribución con las categorías marcadas \`
+
+```{r}
+# Ejercicio - Distribución de Calificaciones
+
+# Parámetros de la distribución uniforme
+min_calif <- 70  # calificación mínima
+max_calif <- 100 # calificación máxima
+n_estudiantes <- 500  # número de estudiantes
+
+# 1. Simular calificaciones de 500 estudiantes
+set.seed(456)  # Para reproducibilidad
+calificaciones <- runif(n_estudiantes, min = min_calif, max = max_calif)
+
+# Redondear calificaciones a números enteros (opcional, más realista)
+calificaciones <- round(calificaciones)
+
+# Mostrar primeras 10 calificaciones
+cat("Primeras 10 calificaciones simuladas:\n")
+print(head(calificaciones, 10))
+cat("\n")
+
+# 2. ¿Qué porcentaje de estudiantes obtiene calificación superior a 85?
+porcentaje_superior_85 <- sum(calificaciones > 85) / n_estudiantes * 100
+prob_teorica_superior_85 <- (max_calif - 85) / (max_calif - min_calif) * 100
+
+cat("Porcentaje de estudiantes con calificación > 85:\n")
+cat("  - Muestral:", round(porcentaje_superior_85, 2), "%\n")
+cat("  - Teórico:", round(prob_teorica_superior_85, 2), "%\n")
+cat("\n")
+
+# 3. Crear categorías y calcular porcentajes
+categorias <- cut(calificaciones, 
+                  breaks = c(69, 79, 89, 100),  # 69 para incluir 70
+                  labels = c("Aprobado (70-79)", "Bien (80-89)", "Excelente (90-100)"),
+                  include.lowest = TRUE)
+
+# Calcular frecuencias por categoría
+frecuencias <- table(categorias)
+porcentajes <- prop.table(frecuencias) * 100
+
+cat("Distribución por categorías (muestral):\n")
+for (i in 1:length(frecuencias)) {
+  cat("  -", names(frecuencias)[i], ":", 
+      frecuencias[i], "estudiantes (", 
+      round(porcentajes[i], 2), "%)\n")
+}
+cat("\n")
+
+# 4. Comparar con porcentajes teóricos
+# Teóricamente, distribución uniforme entre 70 y 100
+rango_total <- max_calif - min_calif
+
+# Cálculo teórico de porcentajes
+porcentaje_teorico_aprobado <- (79.5 - min_calif) / rango_total * 100
+porcentaje_teorico_bien <- (89.5 - 79.5) / rango_total * 100
+porcentaje_teorico_excelente <- (max_calif - 89.5) / rango_total * 100
+
+porcentajes_teoricos <- c(porcentaje_teorico_aprobado, 
+                          porcentaje_teorico_bien, 
+                          porcentaje_teorico_excelente)
+
+cat("Porcentajes teóricos por categorías:\n")
+cat("  - Aprobado (70-79):", round(porcentaje_teorico_aprobado, 2), "%\n")
+cat("  - Bien (80-89):", round(porcentaje_teorico_bien, 2), "%\n")
+cat("  - Excelente (90-100):", round(porcentaje_teorico_excelente, 2), "%\n")
+cat("\n")
+
+# Crear tabla comparativa
+tabla_comparativa <- data.frame(
+  Categoría = c("Aprobado (70-79)", "Bien (80-89)", "Excelente (90-100)"),
+  Muestral = round(porcentajes, 2),
+  Teórico = round(porcentajes_teoricos, 2),
+  Diferencia = round(porcentajes - porcentajes_teoricos, 2)
+)
+
+cat("Tabla comparativa:\n")
+print(tabla_comparativa)
+cat("\n")
+
+# 5. Graficar la distribución con las categorías marcadas
+
+# Configurar espacio para dos gráficos
+par(mfrow = c(1, 2), mar = c(5, 4, 4, 2) + 0.1)
+
+# Gráfico 1: Histograma con categorías coloreadas
+colores_categorias <- c("lightgreen", "lightblue", "gold")
+
+hist(calificaciones, 
+     breaks = 30,
+     col = colores_categorias[as.numeric(categorias)],
+     main = "Distribución de Calificaciones\ncon Categorías",
+     xlab = "Calificación",
+     ylab = "Frecuencia",
+     xlim = c(65, 105),
+     border = "white")
+
+# Agregar líneas divisorias de categorías
+abline(v = 79.5, col = "red", lwd = 2, lty = 2)
+abline(v = 89.5, col = "blue", lwd = 2, lty = 2)
+
+# Agregar etiquetas de categorías
+text(74.5, max(hist(calificaciones, plot = FALSE)$counts) * 0.9, 
+     "Aprobado", col = "darkgreen", font = 2)
+text(84.5, max(hist(calificaciones, plot = FALSE)$counts) * 0.9, 
+     "Bien", col = "darkblue", font = 2)
+text(95, max(hist(calificaciones, plot = FALSE)$counts) * 0.9, 
+     "Excelente", col = "darkgoldenrod", font = 2)
+
+# Gráfico 2: Gráfico de barras por categoría
+barplot(porcentajes,
+        col = colores_categorias,
+        main = "Porcentaje por Categoría",
+        ylab = "Porcentaje (%)",
+        ylim = c(0, max(porcentajes, porcentajes_teoricos) + 5),
+        border = "darkgray")
+
+# Agregar porcentajes encima de las barras
+text(seq(0.7, length.out = 3, by = 1.2), 
+     porcentajes + 1, 
+     paste(round(porcentajes, 1), "%"), 
+     col = "black")
+
+# Gráfico adicional: Comparación teórico vs muestral
+par(mfrow = c(1, 1))
+
+barplot(rbind(porcentajes, porcentajes_teoricos),
+        beside = TRUE,
+        col = c("lightblue", "lightcoral"),
+        main = "Comparación: Porcentajes Muestrales vs Teóricos",
+        ylab = "Porcentaje (%)",
+        names.arg = c("Aprobado", "Bien", "Excelente"),
+        ylim = c(0, 40),
+        border = "darkgray",
+        legend.text = c("Muestral", "Teórico"),
+        args.legend = list(x = "topright"))
+
+# Restaurar configuración gráfica
+par(mfrow = c(1, 1))
+
+# Resumen estadístico
+cat("Resumen estadístico:\n")
+cat("  - Media:", round(mean(calificaciones), 2), "\n")
+cat("  - Mediana:", median(calificaciones), "\n")
+cat("  - Mínimo:", min(calificaciones), "\n")
+cat("  - Máximo:", max(calificaciones), "\n")
+cat("  - Desviación estándar:", round(sd(calificaciones), 2), "\n")
+cat("\n")
+
+# Teóricamente, la media debería ser (70+100)/2 = 85
+cat("Media teórica esperada: 85\n")
+```
+
+
+:::
+
+------------------------------------------------------------------------
+
+::: {#exr-tcl_verificacion}
+### Verificación del TCL con Distribución Asimétrica
+
+Crear una distribución uniforme "truncada" y verificar el TCL.
+
+1.  Generar muestras de unif(0,1) pero solo conservar valores \> 0.3 (esto creará una distribución sesgada)
+
+2.  Para tamaños de muestra n = c(5, 15, 30, 60, 120):
+
+    -   Generar 800 medias muestrales de cada tamaño
+    -   Crear histogramas mostrando la normalización
+    -   Calcular skewness y kurtosis de las distribuciones de medias
+
+3.  ¿A partir de qué tamaño de muestra la distribución de medias se ve aproximadamente normal?
+
+
+
+```{r}
+# Verificación del TCL con Distribución Asimétrica
+
+# Instalar y cargar paquetes necesarios si no están instalados
+if (!require("moments")) install.packages("moments")
+if (!require("ggplot2")) install.packages("ggplot2")
+if (!require("gridExtra")) install.packages("gridExtra")
+
+library(moments)
+library(ggplot2)
+library(gridExtra)
+
+# 1. Generar muestras de unif(0,1) pero solo conservar valores >= 0.3
+generar_muestra_sesgada <- function(tamano) {
+  # Generar más muestras de las necesarias para compensar el truncamiento
+  muestras <- runif(tamano * 5, 0, 1)
+  # Conservar solo valores >= 0.3
+  muestras_truncadas <- muestras[muestras >= 0.3]
+  # Asegurarse de tener al menos 'tamano' muestras
+  if (length(muestras_truncadas) >= tamano) {
+    return(muestras_truncadas[1:tamano])
+  } else {
+    # Si no hay suficientes, generar más
+    return(c(muestras_truncadas, 
+             generar_muestra_sesgada(tamano - length(muestras_truncadas))))
+  }
+}
+
+# Verificar la distribución original truncada
+set.seed(789)
+muestra_grande <- generar_muestra_sesgada(10000)
+
+cat("=== DISTRIBUCIÓN ORIGINAL TRUNCADA ===\n")
+cat("Tamaño de muestra:", length(muestra_grande), "\n")
+cat("Media:", mean(muestra_grande), "\n")
+cat("Desviación estándar:", sd(muestra_grande), "\n")
+cat("Sesgo (skewness):", skewness(muestra_grande), "\n")
+cat("Curtosis (kurtosis):", kurtosis(muestra_grande), "\n")
+
+# Visualizar la distribución original truncada
+par(mfrow = c(1, 2))
+hist(muestra_grande, breaks = 30, col = "lightblue",
+     main = "Distribución Original Truncada",
+     xlab = "Valor", ylab = "Frecuencia",
+     border = "white")
+
+plot(density(muestra_grande), main = "Densidad de la Distribución Truncada",
+     xlab = "Valor", ylab = "Densidad", col = "blue", lwd = 2)
+abline(v = mean(muestra_grande), col = "red", lwd = 2, lty = 2)
+legend("topright", legend = c("Densidad", "Media"), 
+       col = c("blue", "red"), lwd = 2, lty = c(1, 2))
+par(mfrow = c(1, 1))
+
+# 2. Para tamaños de muestra específicos
+tamanos_muestra <- c(5, 15, 30, 60, 120)
+num_simulaciones <- 800
+
+# Función para generar medias muestrales
+generar_medias_muestrales <- function(n, num_sim) {
+  medias <- numeric(num_sim)
+  for (i in 1:num_sim) {
+    muestra <- generar_muestra_sesgada(n)
+    medias[i] <- mean(muestra)
+  }
+  return(medias)
+}
+
+# Lista para almacenar resultados
+resultados <- list()
+estadisticas <- data.frame(
+  n = tamanos_muestra,
+  media_medias = NA,
+  sd_medias = NA,
+  sesgo = NA,
+  curtosis = NA,
+  teorico_sd = NA
+)
+
+# Calcular parámetros de la distribución original
+mu_original <- mean(muestra_grande)
+sigma_original <- sd(muestra_grande)
+
+cat("\n=== SIMULACIÓN DE MEDIAS MUESTRALES ===\n")
+cat("Número de simulaciones por tamaño de muestra:", num_simulaciones, "\n")
+cat("Media poblacional estimada:", mu_original, "\n")
+cat("Desviación estándar poblacional estimada:", sigma_original, "\n\n")
+
+# Realizar simulaciones para cada tamaño de muestra
+for (i in seq_along(tamanos_muestra)) {
+  n <- tamanos_muestra[i]
+  cat("Procesando n =", n, "...\n")
+  
+  # Generar medias muestrales
+  medias <- generar_medias_muestrales(n, num_simulaciones)
+  resultados[[i]] <- medias
+  
+  # Calcular estadísticas
+  estadisticas$media_medias[i] <- mean(medias)
+  estadisticas$sd_medias[i] <- sd(medias)
+  estadisticas$sesgo[i] <- skewness(medias)
+  estadisticas$curtosis[i] <- kurtosis(medias)
+  estadisticas$teorico_sd[i] <- sigma_original / sqrt(n)
+}
+
+# Mostrar tabla de estadísticas
+cat("\n=== ESTADÍSTICAS DE LAS DISTRIBUCIONES DE MEDIAS ===\n")
+print(estadisticas)
+
+# 3. Crear histogramas mostrando la normalización
+plots <- list()
+
+for (i in seq_along(tamanos_muestra)) {
+  n <- tamanos_muestra[i]
+  medias <- resultados[[i]]
+  
+  # Crear histograma con curva normal teórica
+  p <- ggplot(data.frame(x = medias), aes(x = x)) +
+    geom_histogram(aes(y = ..density..), 
+                   bins = 30, 
+                   fill = "lightblue", 
+                   color = "white",
+                   alpha = 0.7) +
+    stat_function(fun = dnorm, 
+                  args = list(mean = estadisticas$media_medias[i], 
+                              sd = estadisticas$sd_medias[i]),
+                  color = "red", 
+                  size = 1) +
+    geom_vline(xintercept = estadisticas$media_medias[i], 
+               color = "darkblue", 
+               linetype = "dashed", 
+               size = 1) +
+    labs(title = paste("Distribución de Medias para n =", n),
+         subtitle = paste("Sesgo =", round(estadisticas$sesgo[i], 3),
+                         "Curtosis =", round(estadisticas$curtosis[i], 3)),
+         x = "Media muestral", 
+         y = "Densidad") +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+          plot.subtitle = element_text(hjust = 0.5))
+  
+  plots[[i]] <- p
+}
+
+# Mostrar todos los gráficos juntos
+grid.arrange(grobs = plots, ncol = 2, 
+             top = "Verificación del Teorema Central del Límite")
+
+# Gráfico adicional: Evolución del sesgo y curtosis
+par(mfrow = c(2, 2))
+
+# Sesgo vs tamaño de muestra
+plot(estadisticas$n, estadisticas$sesgo, 
+     type = "b", pch = 19, col = "blue", lwd = 2,
+     main = "Evolución del Sesgo con n",
+     xlab = "Tamaño de muestra (n)", ylab = "Sesgo",
+     ylim = c(min(estadisticas$sesgo) - 0.1, max(estadisticas$sesgo) + 0.1))
+abline(h = 0, col = "red", lty = 2, lwd = 1.5)
+text(estadisticas$n, estadisticas$sesgo, 
+     round(estadisticas$sesgo, 3), pos = 3, cex = 0.8)
+
+# Curtosis vs tamaño de muestra
+plot(estadisticas$n, estadisticas$curtosis, 
+     type = "b", pch = 19, col = "darkgreen", lwd = 2,
+     main = "Evolución de la Curtosis con n",
+     xlab = "Tamaño de muestra (n)", ylab = "Curtosis",
+     ylim = c(min(estadisticas$curtosis) - 0.1, max(estadisticas$curtosis) + 0.1))
+abline(h = 3, col = "red", lty = 2, lwd = 1.5)  # Curtosis normal = 3
+text(estadisticas$n, estadisticas$curtosis, 
+     round(estadisticas$curtosis, 3), pos = 3, cex = 0.8)
+
+# Error estándar teórico vs observado
+plot(estadisticas$n, estadisticas$sd_medias, 
+     type = "b", pch = 19, col = "purple", lwd = 2,
+     main = "Error Estándar: Teórico vs Observado",
+     xlab = "Tamaño de muestra (n)", ylab = "Error estándar",
+     ylim = c(0, max(c(estadisticas$sd_medias, estadisticas$teorico_sd)) + 0.01))
+lines(estadisticas$n, estadisticas$teorico_sd, 
+      type = "b", pch = 17, col = "orange", lwd = 2)
+legend("topright", legend = c("Observado", "Teórico (σ/√n)"),
+       col = c("purple", "orange"), pch = c(19, 17), lwd = 2)
+
+# Prueba de normalidad (Q-Q plots) para los tamaños más grandes
+par(mfrow = c(2, 2))
+for (i in 3:6) {  # n = 30, 60, 120
+  if (i <= length(tamanos_muestra)) {
+    n <- tamanos_muestra[i]
+    medias <- resultados[[i]]
+    
+    qqnorm(medias, 
+           main = paste("Q-Q Plot para n =", n),
+           xlab = "Cuantiles teóricos",
+           ylab = "Cuantiles muestrales",
+           pch = 19, col = "blue", cex = 0.7)
+    qqline(medias, col = "red", lwd = 2)
+    
+    # Agregar prueba de Shapiro-Wilk (solo para n <= 5000)
+    if (length(medias) <= 5000) {
+      shapiro_test <- shapiro.test(medias)
+      mtext(paste("Shapiro-Wilk p =", round(shapiro_test$p.value, 4)),
+            side = 3, line = -1.5, cex = 0.8)
+    }
+  }
+}
+
+par(mfrow = c(1, 1))
+
+# 4. Determinar a partir de qué tamaño la distribución se ve aproximadamente normal
+cat("\n=== CONCLUSIÓN SOBRE LA NORMALIDAD APROXIMADA ===\n")
+
+# Criterios comunes para considerar "aproximadamente normal":
+# - Sesgo absoluto < 0.5
+# - Curtosis entre 2.5 y 3.5
+# - p-valor Shapiro-Wilk > 0.05 (cuando aplicable)
+
+for (i in seq_along(tamanos_muestra)) {
+  n <- tamanos_muestra[i]
+  sesgo_abs <- abs(estadisticas$sesgo[i])
+  curt <- estadisticas$curtosis[i]
+  
+  criterio_sesgo <- sesgo_abs < 0.5
+  criterio_curtosis <- curt >= 2.5 & curt <= 3.5
+  
+  cat("Para n =", n, ":\n")
+  cat("  Sesgo absoluto:", round(sesgo_abs, 3), 
+      ifelse(criterio_sesgo, "✓ < 0.5", "✗ ≥ 0.5"), "\n")
+  cat("  Curtosis:", round(curt, 3), 
+      ifelse(criterio_curtosis, "✓ entre 2.5-3.5", "✗ fuera de rango"), "\n")
+  
+  # Realizar prueba de Shapiro-Wilk si n <= 5000
+  if (length(resultados[[i]]) <= 5000) {
+    shapiro_test <- shapiro.test(resultados[[i]])
+    cat("  Shapiro-Wilk p-valor:", round(shapiro_test$p.value, 4), 
+        ifelse(shapiro_test$p.value > 0.05, "✓ > 0.05", "✗ ≤ 0.05"), "\n")
+  }
+  
+  # Evaluación general
+  if (criterio_sesgo && criterio_curtosis) {
+    cat("  EVALUACIÓN: Aproximadamente normal ✓\n")
+  } else {
+    cat("  EVALUACIÓN: No completamente normal ✗\n")
+  }
+  cat("\n")
+}
+
+# Gráfico resumen de normalidad
+normalidad_scores <- numeric(length(tamanos_muestra))
+for (i in seq_along(tamanos_muestra)) {
+  # Puntuación de normalidad (0-100%)
+  sesgo_score <- max(0, 100 - abs(estadisticas$sesgo[i]) * 200)  # sesgo=0 -> 100%, sesgo=0.5 -> 0%
+  curtosis_score <- max(0, 100 - abs(estadisticas$curtosis[i] - 3) * 100)  # curtosis=3 -> 100%
+  normalidad_scores[i] <- mean(c(sesgo_score, curtosis_score))
+}
+
+barplot(normalidad_scores, 
+        names.arg = paste("n =", tamanos_muestra),
+        col = ifelse(normalidad_scores > 80, "green", 
+                    ifelse(normalidad_scores > 60, "yellow", "red")),
+        main = "Grado de Normalidad Aproximada",
+        ylab = "Puntuación de Normalidad (%)",
+        ylim = c(0, 100),
+        border = "darkgray")
+abline(h = 80, col = "blue", lty = 2, lwd = 2)
+text(1:length(tamanos_muestra), normalidad_scores + 5, 
+     paste(round(normalidad_scores, 1), "%"), cex = 0.8)
+
+cat("=== RECOMENDACIÓN FINAL ===\n")
+cat("Basado en los criterios de sesgo (< 0.5) y curtosis (2.5-3.5):\n")
+cat("La distribución de medias muestrales se considera aproximadamente normal\n")
+cat("a partir de n =", min(tamanos_muestra[abs(estadisticas$sesgo) < 0.5 & 
+                                          estadisticas$curtosis >= 2.5 & 
+                                          estadisticas$curtosis <= 3.5]), "\n")
+```
+
+
+
+
+
+:::
+
+------------------------------------------------------------------------
+
+::: {#exr-pi_simulacion}
+### Simulación de Monte Carlo
+
+Usar simulación Monte Carlo para estimar $\pi$ usando distribución uniforme.
+
+
+
+
+```{r}
+# Simulación de Monte Carlo para estimar π
+
+# Método: Puntos aleatorios en un cuadrado unitario
+# Relación área círculo/área cuadrado = π/4
+
+# Función para estimar π con n puntos
+estimar_pi <- function(n) {
+  # Generar n puntos aleatorios en [0,1] x [0,1]
+  x <- runif(n, 0, 1)
+  y <- runif(n, 0, 1)
+  
+  # Calcular distancia al centro (0.5, 0.5)
+  distancias <- sqrt((x - 0.5)^2 + (y - 0.5)^2)
+  
+  # Puntos dentro del círculo (radio = 0.5)
+  puntos_dentro <- sum(distancias <= 0.5)
+  
+  # Estimación de π: (puntos dentro / total) * 4
+  pi_estimado <- (puntos_dentro / n) * 4
+  
+  return(list(
+    pi_estimado = pi_estimado,
+    x = x,
+    y = y,
+    dentro = distancias <= 0.5,
+    error = abs(pi_estimado - pi)
+  ))
+}
+
+# Función para visualizar la simulación
+visualizar_simulacion <- function(x, y, dentro, n, pi_est, iteracion = NULL) {
+  # Crear colores según si están dentro o fuera del círculo
+  colores <- ifelse(dentro, "#FF6B6B", "#4ECDC4")
+  
+  # Crear gráfico
+  plot(x, y, 
+       col = colores,
+       pch = 19, cex = 0.6,
+       xlim = c(0, 1), ylim = c(0, 1),
+       asp = 1,  # Aspecto 1:1
+       main = ifelse(!is.null(iteracion), 
+                     paste("Estimación de π - Iteración", iteracion),
+                     paste("Estimación de π con n =", format(n, big.mark = ","))),
+       xlab = "x", ylab = "y",
+       sub = paste("π estimado =", round(pi_est, 6), 
+                   "| Error =", round(abs(pi_est - pi), 6)))
+  
+  # Dibujar el cuadrado
+  rect(0, 0, 1, 1, border = "black", lwd = 2)
+  
+  # Dibujar el círculo
+  theta <- seq(0, 2*pi, length.out = 200)
+  lines(0.5 + 0.5*cos(theta), 0.5 + 0.5*sin(theta), 
+        col = "darkblue", lwd = 2)
+  
+  # Leyenda
+  legend("topright", 
+         legend = c(paste("Dentro:", sum(dentro)), 
+                   paste("Fuera:", n - sum(dentro)),
+                   paste("Total:", n)),
+         fill = c("#FF6B6B", "#4ECDC4", "white"),
+         border = "black",
+         bg = "white")
+}
+
+# SIMULACIÓN 1: Con diferentes tamaños de muestra
+cat("=== SIMULACIÓN DE MONTE CARLO PARA ESTIMAR π ===\n\n")
+
+tamanos_muestra <- c(100, 500, 1000, 5000, 10000, 50000, 100000)
+resultados <- data.frame(
+  n = tamanos_muestra,
+  pi_estimado = numeric(length(tamanos_muestra)),
+  error = numeric(length(tamanos_muestra)),
+  error_relativo = numeric(length(tamanos_muestra))
+)
+
+# Realizar simulaciones para cada tamaño de muestra
+set.seed(123)  # Para reproducibilidad
+for (i in seq_along(tamanos_muestra)) {
+  n <- tamanos_muestra[i]
+  cat("Simulando con n =", format(n, big.mark = ","), "... ")
+  
+  sim <- estimar_pi(n)
+  resultados$pi_estimado[i] <- sim$pi_estimado
+  resultados$error[i] <- sim$error
+  resultados$error_relativo[i] <- sim$error / pi * 100
+  
+  cat("π ≈", round(sim$pi_estimado, 6), 
+      "| Error:", round(sim$error, 6), "\n")
+  
+  # Visualizar para algunos tamaños específicos
+  if (n %in% c(100, 1000, 10000)) {
+    # Crear ventana de gráfico
+    dev.new()
+    visualizar_simulacion(sim$x, sim$y, sim$dentro, n, sim$pi_estimado)
+  }
+}
+
+cat("\n=== RESULTADOS DETALLADOS ===\n")
+print(resultados)
+
+cat("\nValor real de π:", pi, "\n")
+
+# Gráfico de convergencia
+par(mfrow = c(2, 2))
+
+# 1. Error absoluto vs tamaño de muestra
+plot(resultados$n, resultados$error, 
+     type = "b", pch = 19, col = "red", lwd = 2,
+     log = "x",  # Escala logarítmica en x
+     main = "Convergencia del Error Absoluto",
+     xlab = "Número de puntos (n)", ylab = "Error absoluto",
+     ylim = c(0, max(resultados$error) * 1.1))
+abline(h = 0, col = "gray", lty = 2)
+grid()
+
+# 2. Estimación de π vs tamaño de muestra
+plot(resultados$n, resultados$pi_estimado, 
+     type = "b", pch = 19, col = "blue", lwd = 2,
+     log = "x",
+     main = "Estimación de π vs Tamaño de Muestra",
+     xlab = "Número de puntos (n)", ylab = "π estimado",
+     ylim = c(min(resultados$pi_estimado) - 0.1, 
+              max(resultados$pi_estimado) + 0.1))
+abline(h = pi, col = "darkgreen", lwd = 2, lty = 2)
+legend("topright", legend = c("Estimado", "Valor real"), 
+       col = c("blue", "darkgreen"), lwd = 2, lty = c(1, 2))
+grid()
+
+# 3. Error relativo porcentual
+plot(resultados$n, resultados$error_relativo, 
+     type = "b", pch = 19, col = "purple", lwd = 2,
+     log = "x",
+     main = "Error Relativo Porcentual",
+     xlab = "Número de puntos (n)", ylab = "Error relativo (%)",
+     ylim = c(0, max(resultados$error_relativo) * 1.1))
+abline(h = 0, col = "gray", lty = 2)
+grid()
+
+# 4. Ley de potencias: Error ~ 1/√n
+n_teorico <- seq(100, 100000, length.out = 100)
+error_teorico <- 1/sqrt(n_teorico)  # Error teórico proporcional a 1/√n
+# Escalar para comparación visual
+error_teorico <- error_teorico * resultados$error[1] * sqrt(resultados$n[1])
+
+plot(resultados$n, resultados$error, 
+     pch = 19, col = "red", 
+     log = "xy",  # Escala log-log
+     main = "Error vs 1/√n (Escala Log-Log)",
+     xlab = "n", ylab = "Error absoluto")
+lines(n_teorico, error_teorico, col = "blue", lwd = 2)
+legend("topright", legend = c("Observado", "1/√n (teórico)"), 
+       col = c("red", "blue"), pch = c(19, NA), lwd = c(NA, 2))
+grid()
+
+par(mfrow = c(1, 1))
+
+# SIMULACIÓN 2: Evolución de la estimación con el tiempo
+cat("\n=== SIMULACIÓN DE CONVERGENCIA EN TIEMPO REAL ===\n")
+
+n_total <- 10000
+paso <- 100
+estimaciones <- numeric(n_total/paso)
+errores <- numeric(n_total/paso)
+
+# Configurar gráfico animado
+par(mfrow = c(1, 2))
+
+for (i in seq(1, n_total, by = paso)) {
+  # Estimar π con i puntos
+  sim <- estimar_pi(i)
+  
+  # Almacenar resultados
+  idx <- i/paso
+  estimaciones[idx] <- sim$pi_estimado
+  errores[idx] <- sim$error
+  
+  # Gráfico izquierdo: puntos
+  plot(sim$x, sim$y, 
+       col = ifelse(sim$dentro, "#FF6B6B", "#4ECDC4"),
+       pch = 19, cex = 0.4,
+       xlim = c(0, 1), ylim = c(0, 1), asp = 1,
+       main = paste("n =", i),
+       xlab = "", ylab = "")
+  # Dibujar círculo
+  theta <- seq(0, 2*pi, length.out = 200)
+  lines(0.5 + 0.5*cos(theta), 0.5 + 0.5*sin(theta), 
+        col = "darkblue", lwd = 2)
+  
+  # Gráfico derecho: convergencia
+  if (i > paso) {
+    plot(seq(paso, i, by = paso), estimaciones[1:idx], 
+         type = "l", col = "blue", lwd = 2,
+         xlim = c(0, n_total), 
+         ylim = c(min(estimaciones[1:idx]) - 0.1, 
+                  max(estimaciones[1:idx]) + 0.1),
+         main = "Convergencia de la Estimación",
+         xlab = "Número de puntos", ylab = "π estimado")
+    abline(h = pi, col = "darkgreen", lwd = 2, lty = 2)
+    abline(h = sim$pi_estimado, col = "red", lwd = 1, lty = 3)
+    grid()
+    
+    # Añadir leyenda
+    legend("topright", 
+           legend = c("Estimación", "Valor real", "Última estimación"),
+           col = c("blue", "darkgreen", "red"), 
+           lwd = c(2, 2, 1), lty = c(1, 2, 3))
+  }
+  
+  # Pausa breve para animación
+  if (i <= 1000) {
+    Sys.sleep(0.1)
+  } else if (i <= 5000) {
+    Sys.sleep(0.05)
+  } else {
+    Sys.sleep(0.02)
+  }
+}
+
+par(mfrow = c(1, 1))
+
+# SIMULACIÓN 3: Múltiples réplicas para estudiar la variabilidad
+cat("\n=== ESTUDIO DE VARIABILIDAD CON MÚLTIPLES RÉPLICAS ===\n")
+
+n_replicas <- 50
+n_puntos <- 1000
+estimaciones_replicas <- numeric(n_replicas)
+
+set.seed(456)
+for (i in 1:n_replicas) {
+  sim <- estimar_pi(n_puntos)
+  estimaciones_replicas[i] <- sim$pi_estimado
+}
+
+# Estadísticas de las réplicas
+cat("Con n =", n_puntos, "puntos y", n_replicas, "réplicas:\n")
+cat("Media de estimaciones:", mean(estimaciones_replicas), "\n")
+cat("Desviación estándar:", sd(estimaciones_replicas), "\n")
+cat("Error estándar de la media:", sd(estimaciones_replicas)/sqrt(n_replicas), "\n")
+cat("Intervalo de confianza 95%: [", 
+    mean(estimaciones_replicas) - 1.96*sd(estimaciones_replicas)/sqrt(n_replicas), 
+    ", ",
+    mean(estimaciones_replicas) + 1.96*sd(estimaciones_replicas)/sqrt(n_replicas), 
+    "]\n")
+cat("¿Contiene a π?", 
+    ifelse(abs(mean(estimaciones_replicas) - pi) < 1.96*sd(estimaciones_replicas)/sqrt(n_replicas), 
+           "Sí ✓", "No ✗"), "\n")
+
+# Histograma de las réplicas
+hist(estimaciones_replicas, breaks = 15, col = "lightblue",
+     main = paste("Distribución de", n_replicas, "estimaciones de π\n(n =", n_puntos, "puntos cada una)"),
+     xlab = "π estimado", ylab = "Frecuencia",
+     border = "white")
+abline(v = pi, col = "red", lwd = 3, lty = 2)
+abline(v = mean(estimaciones_replicas), col = "blue", lwd = 2, lty = 1)
+legend("topright", legend = c("Valor real π", "Media estimaciones"),
+       col = c("red", "blue"), lwd = c(3, 2), lty = c(2, 1))
+
+# CONCLUSIÓN
+cat("\n=== CONCLUSIÓN ===\n")
+cat("El método de Monte Carlo para estimar π:\n")
+cat("1. Utiliza puntos aleatorios en un cuadrado unitario\n")
+cat("2. Calcula la proporción de puntos dentro de un cuarto de círculo\n")
+cat("3. Multiplica por 4 para obtener la estimación de π\n")
+cat("4. El error decrece aproximadamente como 1/√n\n")
+cat("5. Con n = 100,000 puntos se obtiene típicamente 2-3 decimales correctos\n")
+cat("6. Es un excelente ejemplo de integración Monte Carlo\n")
+
+# Fórmula matemática
+cat("\nFórmula matemática:\n")
+cat("π ≈ 4 × (número de puntos dentro del círculo) / (número total de puntos)\n")
+cat("Área del círculo/Área del cuadrado = π/4\n")
+```
+
+:::

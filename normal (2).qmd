@@ -1,0 +1,2170 @@
+---
+title: "Distribución Normal"
+lang: es
+---
+
+```{=html}
+<style>
+main.content {
+text-align: justify}
+</style>
+```
+
+
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+library(knitr)
+library(kableExtra)
+library(moments)
+```
+
+
+
+La distribución normal, también conocida como distribución gaussiana en honor al matemático alemán Carl Friedrich Gauss, es sin duda la más importante y ampliamente utilizada de todas las distribuciones de probabilidad continuas. Su relevancia en la estadística y en diversas áreas del conocimiento es fundamental por varias razones:
+
+**Importancia teórica:** La distribución normal aparece de manera natural en muchos fenómenos debido al Teorema del Límite Central, que establece que la suma de un gran número de variables aleatorias independientes tiende a seguir una distribución normal, independientemente de las distribuciones individuales de dichas variables.
+
+**Aplicaciones prácticas:** Numerosos fenómenos en la naturaleza, ciencias sociales, ingeniería y otras disciplinas pueden ser modelados adecuadamente mediante la distribución normal: alturas y pesos de poblaciones, errores de medición, puntajes en pruebas estandarizadas, variaciones en procesos industriales, entre muchos otros.
+
+**Propiedades matemáticas:** Posee propiedades analíticas muy convenientes que facilitan los cálculos estadísticos y el desarrollo de métodos inferenciales, convirtiéndola en la base de gran parte de la teoría estadística clásica.
+
+::: {#def-dist_normal}
+
+Una **variable aleatoria continua** $X$ sigue una **distribución normal** con parámetros $\mu$ (media) y $\sigma^2$ (varianza), denotada como $X \sim N(\mu, \sigma^2)$, si su función de densidad de probabilidad está dada por:
+
+$$f(x) = \frac{1}{\sigma\sqrt{2\pi}} e^{-\frac{1}{2}\left(\frac{x-\mu}{\sigma}\right)^2}$$
+
+donde:
+
+- $x \in \mathbb{R}$ (la variable puede tomar cualquier valor real)
+- $\mu \in \mathbb{R}$ es el parámetro de localización (media de la distribución)
+- $\sigma > 0$ es el parámetro de escala (desviación estándar)
+- $\sigma^2$ es la varianza de la distribución
+
+:::
+
+---
+
+La distribución normal es simétrica alrededor de su media $\mu$ y es completamente caracterizada por sus dos parámetros $\mu$ y $\sigma^2$.
+
+**Caso especial:** Cuando $\mu = 0$ y $\sigma^2 = 1$, se denomina **distribución normal estándar** y se denota como $Z \sim N(0,1)$.
+
+
+
+
+## Propiedades de la Función de Densidad de Probabilidad
+
+
+**Componentes de la PDF**
+
+La función puede descomponerse en tres elementos fundamentales:
+
+1. **Factor de normalización**: $\frac{1}{\sigma\sqrt{2\pi}}$
+2. **Componente de localización**: $(x - \mu)$ en el exponente
+3. **Componente exponencial**: $e^{-\frac{1}{2}z^2}$ donde $z = \frac{x-\mu}{\sigma}$
+
+**Verificación de Propiedades de Densidad**
+
+**1. No Negatividad**
+
+$$f(x; \mu, \sigma) > 0 \text{ para todo } x \in \mathbb{R}$$
+
+Esto se cumple porque:
+
+- $\frac{1}{\sigma\sqrt{2\pi}} > 0$ (ya que $\sigma > 0$)
+- $e^{-\frac{1}{2}z^2} > 0$ (la función exponencial es siempre positiva)
+
+**2. Integración Unitaria**
+$$\int_{-\infty}^{\infty} f(x; \mu, \sigma) dx = 1$$
+
+
+**Verificación Numérica**
+
+```{r verificacion-propiedades}
+# Verificación numérica de propiedades
+mu_ver <- 2
+sigma_ver <- 1.5
+
+# Verificar integración unitaria mediante integración numérica
+integrando <- function(x) dnorm(x, mean = mu_ver, sd = sigma_ver)
+integral_resultado <- integrate(integrando, lower = -Inf, upper = Inf)
+
+
+cat("Distribución: N(μ =", mu_ver, ", σ =", sigma_ver, ")\n")
+cat("Integral de la PDF:", round(integral_resultado$value, 8), "\n")
+cat("Error de integración:", integral_resultado$abs.error, "\n")
+cat("No negatividad: f(x) > 0 para todo x ∈ ℝ ✓\n")
+```
+
+### Comportamiento de la PDF al variar los Parámetros
+
+**Efecto del Parámetro de Localización ($\mu$)**
+
+El parámetro $\mu$ controla la **posición** de la distribución en el eje x:
+
+```{r efecto-mu}
+# Visualizar efecto de μ (σ fijo)
+x_vals <- seq(-6, 10, length.out = 1000)
+sigma_fijo <- 1.5
+mus <- c(-1, 1, 3, 5)
+
+df_mu <- data.frame()
+for (mu in mus) {
+  temp <- data.frame(
+    x = x_vals,
+    y = dnorm(x_vals, mean = mu, sd = sigma_fijo),
+    parametro = paste("μ =", mu),
+    tipo = "Efecto de μ (σ = 1.5)"
+  )
+  df_mu <- rbind(df_mu, temp)
+}
+
+ggplot(df_mu, aes(x = x, y = y, color = parametro)) +
+  geom_line(linewidth = 1.2) +
+  geom_vline(xintercept = mus, linetype = "dashed", alpha = 0.7, 
+             color = c("red", "green", "blue", "purple")) +
+  labs(title = "Efecto del Parámetro de Localización μ",
+       subtitle = "Desplazamiento horizontal de la distribución",
+       x = "x", y = "f(x)",
+       color = "Parámetro μ") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+**Efecto del Parámetro de Escala ($\sigma$)**
+
+El parámetro $\sigma$ controla la **dispersión** de la distribución:
+
+```{r efecto-sigma}
+# Visualizar efecto de σ (μ fijo)
+mu_fijo <- 2
+sigmas <- c(0.5, 1, 1.5, 2.5)
+
+df_sigma <- data.frame()
+for (sigma in sigmas) {
+  temp <- data.frame(
+    x = x_vals,
+    y = dnorm(x_vals, mean = mu_fijo, sd = sigma),
+    parametro = paste("σ =", sigma),
+    tipo = "Efecto de σ (μ = 2)"
+  )
+  df_sigma <- rbind(df_sigma, temp)
+}
+
+ggplot(df_sigma, aes(x = x, y = y, color = parametro)) +
+  geom_line(linewidth = 1.2) +
+  geom_vline(xintercept = mu_fijo, linetype = "dashed", color = "black", alpha = 0.7) +
+  labs(title = "Efecto del Parámetro de Escala σ",
+       subtitle = "Cambio en la dispersión de la distribución",
+       x = "x", y = "f(x)",
+       color = "Parámetro σ") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+
+### Propiedades Geométricas de la PDF
+
+**1. Simetría**
+
+La distribución normal es **perfectamente simétrica** respecto a la media:
+
+$$f(\mu + x) = f(\mu - x) \text{ para todo } x \in \mathbb{R}$$
+
+**2. Forma de Campana**
+
+La función tiene la característica forma de **campana de Gauss**:
+
+- **Máximo único** en $x = \mu$ con valor $f(\mu) = \frac{1}{\sigma\sqrt{2\pi}}$
+- **Decrecimiento** simétrico hacia ambos lados
+- **Colas** que se extienden hacia $\pm\infty$ pero nunca tocan el eje x
+
+**3. Puntos de Inflexión**
+
+Los puntos de inflexión ocurren en $x = \mu \pm \sigma$:
+
+$$f''(\mu \pm \sigma) = 0$$
+
+```{r}
+#| label: puntos-inflexion
+
+# Visualizar puntos de inflexión
+mu_inf <- 3
+sigma_inf <- 1.2
+
+x_inf <- seq(mu_inf - 4*sigma_inf, mu_inf + 4*sigma_inf, length.out = 1000)
+y_inf <- dnorm(x_inf, mean = mu_inf, sd = sigma_inf)
+
+# Puntos de inflexión
+inflexion_x <- c(mu_inf - sigma_inf, mu_inf + sigma_inf)
+inflexion_y <- dnorm(inflexion_x, mean = mu_inf, sd = sigma_inf)
+
+ggplot(data.frame(x = x_inf, y = y_inf), aes(x = x, y = y)) +
+  geom_line(linewidth = 1.5, color = "blue") +
+  geom_vline(xintercept = mu_inf, color = "red", linetype = "dashed", linewidth = 1) +
+  geom_vline(xintercept = inflexion_x, color = "green", linetype = "dotted", linewidth = 1) +
+  annotate("point", x = inflexion_x, y = inflexion_y, color = "olivedrab", size = 4) +
+  annotate("label", x = mu_inf, y = max(y_inf) * 1.1, 
+           label = paste("μ =", mu_inf), color = "red", size = 4) +
+  annotate("label", x = inflexion_x[1], y = inflexion_y[1] + 0.02,
+           label = "μ - σ", color = "olivedrab", size = 3.5) +
+  annotate("label", x = inflexion_x[2], y = inflexion_y[2] + 0.02,
+           label = "μ + σ", color = "olivedrab", size = 3.5) +
+  labs(title = "Propiedades Geométricas de la PDF Normal",
+       subtitle = paste("N(", mu_inf, ",", sigma_inf, ") - Puntos de inflexión en μ ± σ"),
+       x = "x", y = "f(x)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+**4. Comportamiento Asintótico**
+
+Cuando $x \to \pm\infty$:
+$$\lim_{x \to \pm\infty} f(x) = 0$$
+
+El decaimiento es **exponencial cuadrático**, más rápido que cualquier función polinomial.
+
+## Estandarización y Distribución Normal Estándar
+
+**Transformación $Z$**
+
+Cualquier variable con distribución normal puede estandarizarse mediante:
+$$Z = \frac{X - \mu}{\sigma} \sim N(0, 1)$$
+
+La **distribución normal estándar** tiene PDF:
+$$\phi(z) = \frac{1}{\sqrt{2\pi}} e^{-\frac{z^2}{2}}$$
+
+```{r estandarizacion}
+# Comparar distribución original vs estandarizada
+mu_est <- 5
+sigma_est <- 2
+
+# Generar datos
+x_orig <- seq(mu_est - 4*sigma_est, mu_est + 4*sigma_est, length.out = 1000)
+z_vals <- (x_orig - mu_est) / sigma_est
+
+# PDFs
+pdf_orig <- dnorm(x_orig, mean = mu_est, sd = sigma_est)
+pdf_std <- dnorm(z_vals, mean = 0, sd = 1)
+
+# Crear dataframe para gráfico
+df_comparacion <- data.frame(
+  x = c(x_orig, z_vals),
+  y = c(pdf_orig, pdf_std),
+  tipo = rep(c("Original N(5,2)", "Estandarizada N(0,1)"), each = length(x_orig)),
+  eje_x = rep(c("Escala original", "Escala estandarizada"), each = length(x_orig))
+)
+
+ggplot(df_comparacion, aes(x = x, y = y, color = tipo)) +
+  geom_line(linewidth = 1.2) +
+  facet_wrap(~eje_x, scales = "free_x") +
+  labs(title = "Estandarización de la Distribución Normal",
+       subtitle = "Transformación Z = (X - μ)/σ",
+       x = "Valor", y = "f(x) o φ(z)",
+       color = "Distribución") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+## Regla Empírica (68-95-99.7)
+
+Una propiedad fundamental de la distribución normal es la **regla empírica**:
+
+```{r regla-empirica}
+# Calcular probabilidades de la regla empírica
+prob_1sigma <- pnorm(1) - pnorm(-1)  # P(-1 < Z < 1)
+prob_2sigma <- pnorm(2) - pnorm(-2)  # P(-2 < Z < 2)
+prob_3sigma <- pnorm(3) - pnorm(-3)  # P(-3 < Z < 3)
+
+regla_empirica <- data.frame(
+  Intervalo = c("μ ± 1σ", "μ ± 2σ", "μ ± 3σ"),
+  `Notación Z` = c("[-1, 1]", "[-2, 2]", "[-3, 3]"),
+  `Probabilidad Exacta` = c(prob_1sigma, prob_2sigma, prob_3sigma),
+  `Aproximación Empírica` = c(0.68, 0.95, 0.997),
+  `Porcentaje` = c("68%", "95%", "99.7%"),
+  check.names = FALSE
+)
+
+kable(regla_empirica,
+      caption = "Regla empírica de la distribución normal",
+      digits = 4) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+
+# Visualizar la regla empírica
+z_seq <- seq(-4, 4, length.out = 1000)
+phi_vals <- dnorm(z_seq)
+
+# Areas para cada sigma
+z_1sigma <- z_seq[abs(z_seq) <= 1]
+z_2sigma <- z_seq[abs(z_seq) <= 2 & abs(z_seq) > 1]
+z_3sigma <- z_seq[abs(z_seq) <= 3 & abs(z_seq) > 2]
+
+phi_1sigma <- dnorm(z_1sigma)
+phi_2sigma <- dnorm(z_2sigma)
+phi_3sigma <- dnorm(z_3sigma)
+
+ggplot(data.frame(z = z_seq, phi = phi_vals), aes(x = z, y = phi)) +
+  geom_line(linewidth = 1.5, color = "black") +
+  geom_area(data = data.frame(z = z_1sigma, phi = phi_1sigma),
+            aes(x = z, y = phi), fill = "red", alpha = 0.3) +
+  geom_area(data = data.frame(z = z_2sigma, phi = phi_2sigma),
+            aes(x = z, y = phi), fill = "orange", alpha = 0.3) +
+  geom_area(data = data.frame(z = z_3sigma, phi = phi_3sigma),
+            aes(x = z, y = phi), fill = "yellow", alpha = 0.3) +
+  geom_vline(xintercept = c(-3, -2, -1, 0, 1, 2, 3), 
+             linetype = "dashed", alpha = 0.6) +
+  annotate("text", x = 0, y = 0.2, label = "68%", size = 4, fontface = "bold") +
+  annotate("text", x = 1.5, y = 0.1, label = "13.5%", size = 3.5) +
+  annotate("text", x = -1.5, y = 0.1, label = "13.5%", size = 3.5) +
+  annotate("text", x = 2.5, y = 0.05, label = "2.35%", size = 3) +
+  annotate("text", x = -2.5, y = 0.05, label = "2.35%", size = 3) +
+  labs(title = "Regla Empírica 68-95-99.7",
+       subtitle = "Distribución de probabilidades en intervalos estándar",
+       x = "Z (desviaciones estándar desde la media)",
+       y = "φ(z)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+## Propiedades de la Función de Distribución Acumulativa
+
+
+::: {#def-cdf_normal}
+La función de distribución acumulativa (CDF) de la distribución normal se define como:
+
+$$F(x) = P(X \leq x) = \int_{-\infty}^{x} \frac{1}{\sigma\sqrt{2\pi}} e^{-\frac{1}{2}\left(\frac{t-\mu}{\sigma}\right)^2} dt$$
+
+:::
+
+---
+
+**Relación con la CDF Estándar**
+
+La CDF normal se expresa en términos de la **función de distribución normal estándar** $\Phi(z)$:
+
+$$F(x) = \Phi\left(\frac{x-\mu}{\sigma}\right)$$
+
+donde:
+$$\Phi(z) = \frac{1}{\sqrt{2\pi}} \int_{-\infty}^{z} e^{-\frac{t^2}{2}} dt$$
+
+
+
+**Observación**: La CDF normal **no tiene forma cerrada** en términos de funciones elementales. Su cálculo requiere:
+
+- **Integración numérica**
+- **Series de Taylor**
+- **Aproximaciones asintóticas**
+- **Tablas precalculadas**
+
+
+### Propiedades Fundamentales de la CDF
+
+
+**Simetría de la CDF**
+
+Una propiedad crucial es la **simetría** respecto a la media:
+
+$$F(\mu + x) + F(\mu - x) = 1$$
+
+Verificación numérica:
+
+```{r simetria-cdf}
+# Demostrar simetría de la CDF
+mu_sim <- 2
+sigma_sim <- 1
+x_test <- 1.5
+
+# Puntos simétricos
+punto_der <- mu_sim + x_test
+punto_izq <- mu_sim - x_test
+
+# CDFs
+cdf_der <- pnorm(punto_der, mu_sim, sigma_sim)
+cdf_izq <- pnorm(punto_izq, mu_sim, sigma_sim)
+suma_simetria <- cdf_der + cdf_izq
+
+cat("Distribución: N(", mu_sim, ",", sigma_sim, ")\n")
+cat("Puntos: μ - x =", punto_izq, ", μ + x =", punto_der, "\n")
+cat("F(μ - x) =", round(cdf_izq, 4), "\n")
+cat("F(μ + x) =", round(cdf_der, 4), "\n")
+cat("Suma =", round(suma_simetria, 4), "\n")
+cat("¿F(μ + x) + F(μ - x) = 1?", abs(suma_simetria - 1) < 1e-10, "\n")
+```
+
+
+
+### Efecto de los Parámetros en la CDF
+
+```{r visualizacion-cdf}
+# Visualizar CDFs con diferentes parámetros
+x_range_cdf <- seq(-6, 10, length.out = 1000)
+
+# Efecto de μ
+mus_cdf <- c(-1, 1, 3, 5)
+sigma_fijo_cdf <- 1.5
+
+df_mu_cdf <- data.frame()
+for (mu in mus_cdf) {
+  temp <- data.frame(
+    x = x_range_cdf,
+    y = pnorm(x_range_cdf, mean = mu, sd = sigma_fijo_cdf),
+    parametro = paste("μ =", mu),
+    tipo = "Efecto de μ (σ = 1.5)"
+  )
+  df_mu_cdf <- rbind(df_mu_cdf, temp)
+}
+
+# Efecto de σ
+mu_fijo_cdf <- 2
+sigmas_cdf <- c(0.5, 1, 1.5, 2.5)
+
+df_sigma_cdf <- data.frame()
+for (sigma in sigmas_cdf) {
+  temp <- data.frame(
+    x = x_range_cdf,
+    y = pnorm(x_range_cdf, mean = mu_fijo_cdf, sd = sigma),
+    parametro = paste("σ =", sigma),
+    tipo = "Efecto de σ (μ = 2)"
+  )
+  df_sigma_cdf <- rbind(df_sigma_cdf, temp)
+}
+
+# Combinar datos
+df_cdf_efectos <- rbind(df_mu_cdf, df_sigma_cdf)
+
+# Crear gráfico
+ggplot(df_cdf_efectos, aes(x = x, y = y, color = parametro)) +
+  geom_line(linewidth = 1.2) +
+  geom_hline(yintercept = c(0, 0.5, 1), linetype = "dashed", alpha = 0.5) +
+  facet_wrap(~tipo, scales = "free_x", ncol = 2) +
+  labs(title = "Función de Distribución Acumulativa - Distribución Normal",
+       subtitle = "Efecto de los parámetros μ y σ",
+       x = "x", y = "F(x) = P(X ≤ x)",
+       color = "Parámetro") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5)) +
+  ylim(0, 1)
+```
+
+**Comparación: PDF vs CDF**
+
+```{r pdf-vs-cdf-normal}
+# Comparar PDF y CDF lado a lado
+mu_comp <- 3
+sigma_comp <- 1.2
+
+x_comp <- seq(mu_comp - 4*sigma_comp, mu_comp + 4*sigma_comp, length.out = 1000)
+pdf_comp <- dnorm(x_comp, mean = mu_comp, sd = sigma_comp)
+cdf_comp <- pnorm(x_comp, mean = mu_comp, sd = sigma_comp)
+
+# Crear dataframe
+df_comparacion_normal <- data.frame(
+  x = rep(x_comp, 2),
+  y = c(pdf_comp, cdf_comp),
+  tipo = rep(c("PDF: f(x)", "CDF: F(x)"), each = length(x_comp))
+)
+
+ggplot(df_comparacion_normal, aes(x = x, y = y)) +
+  geom_line(linewidth = 1.2, color = "blue") +
+  geom_vline(xintercept = mu_comp, linetype = "dashed", color = "red", alpha = 0.7) +
+  facet_wrap(~tipo, scales = "free_y", ncol = 2) +
+  labs(title = paste("Comparación PDF vs CDF: N(", mu_comp, ",", sigma_comp, ")"),
+       x = "x", y = "Valor de la función") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Cálculo de Probabilidades
+
+
+
+Para calcular $P(a < X \leq b)$ en una distribución normal:
+
+$$P(a < X \leq b) = F(b) - F(a) = \Phi\left(\frac{b-\mu}{\sigma}\right) - \Phi\left(\frac{a-\mu}{\sigma}\right)$$
+
+```{r calculo-probabilidades}
+# Ejemplo de cálculo de probabilidades
+mu_prob <- 50
+sigma_prob <- 12
+a_val <- 45
+b_val <- 60
+
+# Calcular diferentes tipos de probabilidades
+prob_menor_igual_b <- pnorm(b_val, mu_prob, sigma_prob)
+prob_mayor_a <- 1 - pnorm(a_val, mu_prob, sigma_prob)
+prob_intervalo <- pnorm(b_val, mu_prob, sigma_prob) - pnorm(a_val, mu_prob, sigma_prob)
+
+# Calcular usando estandarización
+z_a <- (a_val - mu_prob) / sigma_prob
+z_b <- (b_val - mu_prob) / sigma_prob
+prob_intervalo_std <- pnorm(z_b) - pnorm(z_a)
+
+# Tabla de probabilidades
+tabla_prob <- data.frame(
+  `Tipo de Probabilidad` = c(
+    paste("P(X ≤", b_val, ")"),
+    paste("P(X >", a_val, ")"),
+    paste("P(", a_val, "< X ≤", b_val, ")"),
+    "P(a < X ≤ b) vía Z"
+  ),
+  `Fórmula` = c(
+    paste("F(", b_val, ")"),
+    paste("1 - F(", a_val, ")"),
+    paste("F(", b_val, ") - F(", a_val, ")"),
+    paste("Φ(", round(z_b, 2), ") - Φ(", round(z_a, 2), ")")
+  ),
+  `Valor` = round(c(prob_menor_igual_b, prob_mayor_a, prob_intervalo, prob_intervalo_std), 4),
+  `Interpretación` = c(
+    "Probabilidad acumulada hasta b",
+    "Probabilidad de cola superior",
+    "Probabilidad en intervalo",
+    "Mismo resultado vía estandarización"
+  ),
+  check.names = FALSE
+)
+
+kable(tabla_prob,
+      caption = paste("Cálculo de probabilidades para N(", mu_prob, ",", sigma_prob, ")")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+**Visualización del Área Bajo la Curva**
+
+```{r area-bajo-curva}
+# Crear visualización del área bajo la curva
+x_area <- seq(mu_prob - 4*sigma_prob, mu_prob + 4*sigma_prob, length.out = 1000)
+pdf_area <- dnorm(x_area, mean = mu_prob, sd = sigma_prob)
+
+# Identificar el área de interés
+x_intervalo <- x_area[x_area > a_val & x_area <= b_val]
+pdf_intervalo <- pdf_area[x_area > a_val & x_area <= b_val]
+
+# Crear el gráfico
+ggplot(data.frame(x = x_area, y = pdf_area), aes(x = x, y = y)) +
+  geom_line(linewidth = 1.5, color = "blue") +
+  geom_area(data = data.frame(x = x_intervalo, y = pdf_intervalo),
+            aes(x = x, y = y), fill = "red", alpha = 0.3) +
+  geom_vline(xintercept = c(a_val, b_val), linetype = "dashed", color = "red", linewidth = 1) +
+  geom_vline(xintercept = mu_prob, linetype = "dotted", color = "black", linewidth = 1) +
+  annotate("label", x = mean(c(a_val, b_val)), y = max(pdf_area) * 0.3,
+           label = paste("P(", a_val, "< X ≤", b_val, ") =", round(prob_intervalo, 3)),
+           size = 4, color = "red", fontface = "bold") +
+  annotate("label", x = mu_prob, y = max(pdf_area) * 1.1,
+           label = paste("μ =", mu_prob), size = 3.5) +
+  labs(title = "Cálculo de Probabilidades usando Área Bajo la Curva",
+       subtitle = paste("Distribución N(", mu_prob, ",", sigma_prob, ")"),
+       x = "x", y = "f(x)",
+       caption = "El área sombreada representa la probabilidad del intervalo") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+## Cuantiles de la Distribución Normal
+
+### Función Cuantil
+
+El cuantil $x_p$ se define como el valor que satisface:
+$F(x_p; \mu, \sigma) = p$
+
+Para la distribución normal:
+$x_p = \mu + \sigma \cdot \Phi^{-1}(p)$
+
+donde $\Phi^{-1}(p)$ es la función cuantil de la normal estándar.
+
+```{r cuantiles-normal}
+# Calcular cuantiles importantes
+percentiles <- c(0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99)
+
+# Para diferentes distribuciones normales
+configuraciones_cuant <- list(
+  "N(0, 1)" = list(mu = 0, sigma = 1),
+  "N(100, 15)" = list(mu = 100, sigma = 15),
+  "N(-5, 2)" = list(mu = -5, sigma = 2)
+)
+
+# Crear tabla de cuantiles
+tabla_cuantiles <- data.frame(
+  Percentil = paste0(percentiles * 100, "%"),
+  `Z crítico` = round(qnorm(percentiles), 3)
+)
+
+for (nombre in names(configuraciones_cuant)) {
+  config <- configuraciones_cuant[[nombre]]
+  cuantiles <- qnorm(percentiles, mean = config$mu, sd = config$sigma)
+  tabla_cuantiles[[nombre]] <- round(cuantiles, 2)
+}
+
+kable(tabla_cuantiles,
+      caption = "Cuantiles para diferentes distribuciones normales") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  scroll_box(width = "100%")
+```
+
+### Valores Críticos Importantes
+
+```{r valores-criticos}
+# Valores críticos comunes
+valores_criticos <- data.frame(
+  `Nombre` = c("1.96", "2.58", "1.64", "1.28", "2.33"),
+  `Valor Z` = c(1.96, 2.58, 1.645, 1.282, 2.326),
+  `Probabilidad` = c(0.975, 0.995, 0.95, 0.90, 0.99),
+  `Intervalo Central` = c("95%", "99%", "90%", "80%", "98%"),
+  `Uso Común` = c(
+    "IC 95%, pruebas bilaterales",
+    "IC 99%, pruebas bilaterales", 
+    "Pruebas unilaterales α = 0.05",
+    "Pruebas unilaterales α = 0.10",
+    "Pruebas unilaterales α = 0.01"
+  ),
+  check.names = FALSE
+)
+
+kable(valores_criticos,
+      caption = "Valores críticos importantes de la distribución normal estándar") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+### Visualización de Cuantiles en la CDF
+
+```{r visualizacion-cuantiles}
+# Mostrar cuantiles en el gráfico de CDF
+mu_q <- 10
+sigma_q <- 3
+x_q <- seq(mu_q - 4*sigma_q, mu_q + 4*sigma_q, length.out = 1000)
+cdf_q <- pnorm(x_q, mean = mu_q, sd = sigma_q)
+
+# Cuantiles específicos
+p_vals <- c(0.25, 0.5, 0.75)
+q_vals <- qnorm(p_vals, mean = mu_q, sd = sigma_q)
+
+# Crear puntos para los cuantiles
+df_cuantiles <- data.frame(
+  x = q_vals,
+  y = p_vals,
+  etiqueta = paste0("Q", p_vals*100, " = ", round(q_vals, 1))
+)
+
+ggplot(data.frame(x = x_q, y = cdf_q), aes(x = x, y = y)) +
+  geom_line(linewidth = 1.5, color = "blue") +
+  geom_hline(yintercept = p_vals, linetype = "dashed", color = "red", alpha = 0.7) +
+  geom_vline(xintercept = q_vals, linetype = "dashed", color = "red", alpha = 0.7) +
+  geom_point(data = df_cuantiles, aes(x = x, y = y), 
+             color = "red", size = 3) +
+  geom_text(data = df_cuantiles, aes(x = x, y = y, label = etiqueta),
+            vjust = -0.5, hjust = 0.5, size = 3.5) +
+  labs(title = paste("Cuantiles en la CDF: N(", mu_q, ",", sigma_q, ")"),
+       x = "x", y = "F(x)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ylim(0, 1)
+```
+
+
+## Propiedades de Simetría y Complementariedad
+
+### Relaciones de Simetría
+
+Para la distribución normal estándar:
+
+1. **Simetría**: $\Phi(-z) = 1 - \Phi(z)$
+2. **Complemento**: $P(Z > z) = 1 - \Phi(z) = \Phi(-z)$
+3. **Intervalo simétrico**: $P(-z < Z < z) = 2\Phi(z) - 1$
+
+```{r propiedades-simetria}
+# Verificar propiedades de simetría
+z_simetria <- c(0.5, 1, 1.5, 2, 2.5, 3)
+
+verificacion_simetria <- data.frame(
+  z = z_simetria,
+  `Φ(z)` = round(pnorm(z_simetria), 4),
+  `Φ(-z)` = round(pnorm(-z_simetria), 4),
+  `1 - Φ(z)` = round(1 - pnorm(z_simetria), 4),
+  `P(-z < Z < z)` = round(2*pnorm(z_simetria) - 1, 4),
+  `Verificación` = round(pnorm(-z_simetria), 4) == round(1 - pnorm(z_simetria), 4),
+  check.names = FALSE
+)
+
+kable(verificacion_simetria,
+      caption = "Verificación de propiedades de simetría") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+
+# Visualizar la simetría
+z_sym <- seq(-3, 3, length.out = 1000)
+phi_sym <- dnorm(z_sym)
+cdf_sym <- pnorm(z_sym)
+
+# Punto específico para mostrar simetría
+z_punto <- 1.5
+punto_neg <- -z_punto
+cdf_pos <- pnorm(z_punto)
+cdf_neg <- pnorm(punto_neg)
+
+ggplot(data.frame(z = z_sym, phi = phi_sym, cdf = cdf_sym)) +
+  geom_line(aes(x = z, y = phi), linewidth = 1.2, color = "blue") +
+  geom_area(data = data.frame(z = z_sym[z_sym <= punto_neg], 
+                             phi = phi_sym[z_sym <= punto_neg]),
+            aes(x = z, y = phi), fill = "red", alpha = 0.3) +
+  geom_area(data = data.frame(z = z_sym[z_sym >= z_punto], 
+                             phi = phi_sym[z_sym >= z_punto]),
+            aes(x = z, y = phi), fill = "red", alpha = 0.3) +
+  geom_vline(xintercept = c(punto_neg, z_punto), linetype = "dashed", color = "red") +
+  annotate("text", x = punto_neg, y = 0.3, 
+           label = paste("Φ(", punto_neg, ") =", round(cdf_neg, 3)), 
+           angle = 90, vjust = -0.5, size = 3.5) +
+  annotate("text", x = z_punto, y = 0.3, 
+           label = paste("1 - Φ(", z_punto, ") =", round(1 - cdf_pos, 3)), 
+           angle = 90, vjust = 1.5, size = 3.5) +
+  labs(title = "Propiedad de Simetría: Φ(-z) = 1 - Φ(z)",
+       subtitle = "Las áreas sombreadas son iguales",
+       x = "z", y = "φ(z)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+
+
+
+
+
+
+## Simulación y Comparación con Parámetros Teóricos
+
+
+Consideremos una distribución $N(\mu = 75, \sigma^2 = 144)$, es decir $N(75, 12^2)$:
+
+```{r parametros-simulacion}
+# Parámetros de la distribución normal
+mu_sim <- 75
+sigma_sim <- 12
+
+# Parámetros teóricos
+media_teorica <- mu_sim
+varianza_teorica <- sigma_sim^2
+desv_std_teorica <- sigma_sim
+mediana_teorica <- mu_sim  # Por simetría
+moda_teorica <- mu_sim     # Unimodal en μ
+
+cat("Distribución: N(μ =", mu_sim, ", σ² =", varianza_teorica, ")\n")
+cat("Media teórica:", media_teorica, "\n")
+cat("Mediana teórica:", mediana_teorica, "\n")
+cat("Moda teórica:", moda_teorica, "\n")
+cat("Varianza teórica:", varianza_teorica, "\n")
+cat("Desviación estándar teórica:", desv_std_teorica, "\n")
+cat("Coeficiente de variación teórico:", round(desv_std_teorica/media_teorica, 4), "\n")
+```
+
+**Simulación con Diferentes Tamaños de Muestra**
+
+
+```{r simulacion-convergencia}
+# Diferentes tamaños de muestra
+tamaños_muestra <- c(30, 100, 500, 1000, 5000, 10000)
+
+# Función para calcular estadísticos muestrales
+calcular_estadisticos_normal <- function(n, mu, sigma) {
+  muestra <- rnorm(n, mean = mu, sd = sigma)
+  
+  return(data.frame(
+    n = n,
+    media_muestral = mean(muestra),
+    varianza_muestral = var(muestra),
+    desv_std_muestral = sd(muestra),
+    mediana_muestral = median(muestra),
+    min_muestral = min(muestra),
+    max_muestral = max(muestra),
+    q1_muestral = quantile(muestra, 0.25),
+    q3_muestral = quantile(muestra, 0.75)
+  ))
+}
+
+# Realizar simulaciones
+resultados_simulacion <- do.call(rbind, lapply(tamaños_muestra, calcular_estadisticos_normal, 
+                                              mu = mu_sim, sigma = sigma_sim))
+
+# Agregar valores teóricos y errores
+resultados_simulacion$media_teorica <- media_teorica
+resultados_simulacion$varianza_teorica <- varianza_teorica
+resultados_simulacion$desv_std_teorica <- desv_std_teorica
+resultados_simulacion$mediana_teorica <- mediana_teorica
+resultados_simulacion$asimetria_teorica <- 0
+resultados_simulacion$curtosis_teorica <- 3
+
+# Calcular errores relativos
+resultados_simulacion$error_media <- abs(resultados_simulacion$media_muestral - media_teorica) / media_teorica * 100
+resultados_simulacion$error_varianza <- abs(resultados_simulacion$varianza_muestral - varianza_teorica) / varianza_teorica * 100
+resultados_simulacion$error_desv_std <- abs(resultados_simulacion$desv_std_muestral - desv_std_teorica) / desv_std_teorica * 100
+
+# Mostrar tabla de resultados principales
+tabla_principales <- resultados_simulacion[, c("n", "media_muestral", "media_teorica", "error_media",
+                                               "varianza_muestral", "varianza_teorica", "error_varianza",
+                                               "desv_std_muestral", "desv_std_teorica", "error_desv_std")]
+
+kable(tabla_principales,
+      caption = "Convergencia de estadísticos muestrales hacia valores teóricos",
+      digits = 3,
+      col.names = c("n", "Media Obs.", "Media Teór.", "Error %",
+                    "Var. Obs.", "Var. Teór.", "Error %",
+                    "DE Obs.", "DE Teór.", "Error %")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) 
+```
+
+<br>
+
+**Visualización de la Convergencia (Ley de Grandes Números)**
+
+```{r ley-grandes-numeros}
+#| warning: false
+
+# Generar una secuencia larga para observar convergencia
+n_total <- 15000
+muestra_larga <- rnorm(n_total, mean = mu_sim, sd = sigma_sim)
+
+# Calcular estadísticos acumulados
+indices <- 1:n_total
+medias_acumuladas <- cumsum(muestra_larga) / indices
+varianzas_acumuladas <- sapply(indices, function(i) var(muestra_larga[1:i]))
+desv_std_acumuladas <- sqrt(varianzas_acumuladas)
+
+# Crear dataframe para gráficos
+df_convergencia <- data.frame(
+  n = indices,
+  media_acumulada = medias_acumuladas,
+  varianza_acumulada = varianzas_acumuladas,
+  desv_std_acumulada = desv_std_acumuladas
+)
+
+# Gráfico de convergencia de la media
+p1 <- ggplot(df_convergencia, aes(x = n)) +
+  geom_line(aes(y = media_acumulada), color = "blue", alpha = 0.8) +
+  geom_hline(yintercept = media_teorica, color = "red", linetype = "dashed", linewidth = 1) +
+  labs(title = "Convergencia de la Media Muestral",
+       x = "Tamaño de muestra (n)",
+       y = "Media acumulada",
+       caption = paste("Línea roja: Media teórica =", media_teorica)) +
+  theme_minimal() +
+  ylim(media_teorica - 2, media_teorica + 2)
+
+# Gráfico de convergencia de la desviación estándar
+p2 <- ggplot(df_convergencia, aes(x = n)) +
+  geom_line(aes(y = desv_std_acumulada), color = "green", alpha = 0.8) +
+  geom_hline(yintercept = desv_std_teorica, color = "red", linetype = "dashed", linewidth = 1) +
+  labs(title = "Convergencia de la Desviación Estándar",
+       x = "Tamaño de muestra (n)",
+       y = "Desviación estándar acumulada",
+       caption = paste("Línea roja: DE teórica =", desv_std_teorica)) +
+  theme_minimal() +
+  ylim(desv_std_teorica - 2, desv_std_teorica + 2)
+
+# Mostrar ambos gráficos
+grid.arrange(p1, p2, ncol = 2,
+             top = "Ley de Grandes Números - Distribución Normal")
+```
+
+**Comparación Histograma vs Densidad Teórica**
+
+```{r histograma-densidad}
+# Generar muestra grande para comparación visual
+muestra_grande <- rnorm(10000, mean = mu_sim, sd = sigma_sim)
+
+# Crear histograma con densidad teórica superpuesta
+ggplot(data.frame(x = muestra_grande), aes(x = x)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 50, 
+                 fill = "lightblue", color = "black", alpha = 0.7) +
+  stat_function(fun = dnorm, args = list(mean = mu_sim, sd = sigma_sim),
+                color = "red", linewidth = 2) +
+  geom_vline(xintercept = media_teorica, color = "red", linetype = "dashed", linewidth = 1) +
+  geom_vline(xintercept = c(mu_sim - sigma_sim, mu_sim + sigma_sim), 
+             color = "orange", linetype = "dotted", linewidth = 1) +
+  labs(title = "Histograma de Muestra vs Densidad Teórica",
+       subtitle = paste("10,000 observaciones de N(", mu_sim, ",", sigma_sim, "²)"),
+       x = "Valores",
+       y = "Densidad",
+       caption = "Curva roja: Densidad teórica | Línea roja: μ | Líneas naranjas: μ ± σ") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+**Verificación de la Regla Empírica**
+
+```{r verificacion-regla-empirica}
+# Verificar la regla 68-95-99.7 con la muestra simulada
+n_muestra_regla <- 10000
+muestra_regla <- rnorm(n_muestra_regla, mean = mu_sim, sd = sigma_sim)
+
+# Intervalos teóricos
+intervalo_1sigma <- c(mu_sim - sigma_sim, mu_sim + sigma_sim)
+intervalo_2sigma <- c(mu_sim - 2*sigma_sim, mu_sim + 2*sigma_sim)
+intervalo_3sigma <- c(mu_sim - 3*sigma_sim, mu_sim + 3*sigma_sim)
+
+# Proporciones observadas
+prop_1sigma_obs <- mean(muestra_regla >= intervalo_1sigma[1] & muestra_regla <= intervalo_1sigma[2])
+prop_2sigma_obs <- mean(muestra_regla >= intervalo_2sigma[1] & muestra_regla <= intervalo_2sigma[2])
+prop_3sigma_obs <- mean(muestra_regla >= intervalo_3sigma[1] & muestra_regla <= intervalo_3sigma[2])
+
+# Proporciones teóricas
+prop_1sigma_teo <- pnorm(1) - pnorm(-1)
+prop_2sigma_teo <- pnorm(2) - pnorm(-2)
+prop_3sigma_teo <- pnorm(3) - pnorm(-3)
+
+# Crear tabla de verificación
+verificacion_regla <- data.frame(
+  Intervalo = c("μ ± 1σ", "μ ± 2σ", "μ ± 3σ"),
+  `Rango Numérico` = c(
+    paste("[", round(intervalo_1sigma[1], 1), ",", round(intervalo_1sigma[2], 1), "]"),
+    paste("[", round(intervalo_2sigma[1], 1), ",", round(intervalo_2sigma[2], 1), "]"),
+    paste("[", round(intervalo_3sigma[1], 1), ",", round(intervalo_3sigma[2], 1), "]")
+  ),
+  `Proporción Teórica` = c(prop_1sigma_teo, prop_2sigma_teo, prop_3sigma_teo),
+  `Porcentaje Teórico` = c("68.27%", "95.45%", "99.73%"),
+  `Proporción Observada` = c(prop_1sigma_obs, prop_2sigma_obs, prop_3sigma_obs),
+  `Porcentaje Observado` = paste0(round(c(prop_1sigma_obs, prop_2sigma_obs, prop_3sigma_obs) * 100, 2), "%"),
+  `Error Absoluto` = abs(c(prop_1sigma_obs, prop_2sigma_obs, prop_3sigma_obs) - 
+                        c(prop_1sigma_teo, prop_2sigma_teo, prop_3sigma_teo)),
+  check.names = FALSE
+)
+
+kable(verificacion_regla,
+      caption = paste("Verificación de la regla empírica con", n_muestra_regla, "observaciones"),
+      digits = 4) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+
+## Ejemplos Prácticos
+
+
+::: {#exm-control_calidad}
+
+### Control de Calidad en Manufactura
+
+Una fábrica produce tornillos cuyo diámetro sigue una distribución normal con media $\mu = 8.00 mm$ y desviación estándar $\sigma = 0.15 mm$. Los tornillos se consideran defectuosos si su diámetro está fuera del rango [7.70, 8.30] mm.
+
+```{r ejemplo-manufactura}
+# Parámetros del proceso
+mu_tornillos <- 8.00  # mm
+sigma_tornillos <- 0.15  # mm
+limite_inferior <- 7.70
+limite_superior <- 8.30
+
+# Simulación de un lote de producción
+n_lote <- 5000
+set.seed(456)
+diametros <- rnorm(n_lote, mean = mu_tornillos, sd = sigma_tornillos)
+
+# Análisis de calidad
+dentro_especificacion <- sum(diametros >= limite_inferior & diametros <= limite_superior)
+defectos_pequeños <- sum(diametros < limite_inferior)
+defectos_grandes <- sum(diametros > limite_superior)
+
+porcentaje_calidad <- (dentro_especificacion / n_lote) * 100
+porcentaje_def_pequeños <- (defectos_pequeños / n_lote) * 100
+porcentaje_def_grandes <- (defectos_grandes / n_lote) * 100
+
+# Cálculos teóricos
+prob_calidad_teorica <- pnorm(limite_superior, mu_tornillos, sigma_tornillos) - 
+                       pnorm(limite_inferior, mu_tornillos, sigma_tornillos)
+prob_def_pequeños_teorica <- pnorm(limite_inferior, mu_tornillos, sigma_tornillos)
+prob_def_grandes_teorica <- 1 - pnorm(limite_superior, mu_tornillos, sigma_tornillos)
+
+cat("=== ANÁLISIS DE CONTROL DE CALIDAD ===\n")
+cat("Proceso: Diámetro ~ N(8.00, 0.15²) mm\n")
+cat("Especificación: [7.70, 8.30] mm\n")
+cat("Lote simulado:", n_lote, "tornillos\n\n")
+
+cat("RESULTADOS DE CALIDAD:\n")
+cat("• Tornillos dentro de especificación:", dentro_especificacion, "(", round(porcentaje_calidad, 2), "%)\n")
+cat("• Defectos por tamaño pequeño:", defectos_pequeños, "(", round(porcentaje_def_pequeños, 2), "%)\n")
+cat("• Defectos por tamaño grande:", defectos_grandes, "(", round(porcentaje_def_grandes, 2), "%)\n\n")
+
+cat("COMPARACIÓN CON VALORES TEÓRICOS:\n")
+cat("• Calidad teórica:", round(prob_calidad_teorica * 100, 2), "%\n")
+cat("• Defectos pequeños teórico:", round(prob_def_pequeños_teorica * 100, 2), "%\n")
+cat("• Defectos grandes teórico:", round(prob_def_grandes_teorica * 100, 2), "%\n")
+
+
+# Visualización
+ggplot(data.frame(diametro = diametros), aes(x = diametro)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 50, 
+                 fill = "lightblue", color = "black", alpha = 0.7) +
+  stat_function(fun = dnorm, args = list(mean = mu_tornillos, sd = sigma_tornillos),
+                color = "red", linewidth = 2) +
+  geom_vline(xintercept = c(limite_inferior, limite_superior), 
+             color = "darkgreen", linewidth = 2, linetype = "dashed") +
+  geom_vline(xintercept = mu_tornillos, color = "red", linewidth = 1, linetype = "dotted") +
+  annotate("rect", xmin = limite_inferior, xmax = limite_superior,
+           ymin = 0, ymax = Inf, alpha = 0.1, fill = "green") +
+  labs(title = "Control de Calidad: Diámetro de Tornillos",
+       subtitle = "Zona verde: Especificación aceptable",
+       x = "Diámetro (mm)",
+       y = "Densidad") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+:::
+
+
+
+::: {#exm-sistema_respuesta}
+
+### Análisis de Tiempos de Respuesta de un Sistema
+
+Los tiempos de respuesta de un sistema informático siguen una distribución normal con media $\mu = 2.5$ segundos y desviación estándar $\sigma = 0.8$ segundos. Se requiere evaluar el rendimiento del sistema bajo diferentes cargas de trabajo.
+
+```{r ejemplo-sistema}
+#| warning: false
+
+# Parámetros del sistema
+mu_sistema <- 2.5  # segundos
+sigma_sistema <- 0.8  # segundos
+
+# Simular tiempos de respuesta durante diferentes períodos
+n_solicitudes <- 3000
+set.seed(101112)
+tiempos_respuesta <- rnorm(n_solicitudes, mean = mu_sistema, sd = sigma_sistema)
+
+# Filtrar tiempos negativos (no físicamente posibles)
+tiempos_respuesta <- tiempos_respuesta[tiempos_respuesta > 0]
+n_validos <- length(tiempos_respuesta)
+
+# Análisis de SLA (Service Level Agreement)
+sla_excelente <- 1.5  # < 1.5 seg
+sla_bueno <- 3.0      # < 3.0 seg  
+sla_aceptable <- 4.5  # < 4.5 seg
+sla_inaceptable <- 6.0 # ≥ 6.0 seg
+
+# Calcular cumplimiento de SLA
+cumple_excelente <- mean(tiempos_respuesta < sla_excelente) * 100
+cumple_bueno <- mean(tiempos_respuesta < sla_bueno) * 100
+cumple_aceptable <- mean(tiempos_respuesta < sla_aceptable) * 100
+sobre_inaceptable <- mean(tiempos_respuesta >= sla_inaceptable) * 100
+
+# Cálculos teóricos
+cum_excelente_teo <- pnorm(sla_excelente, mu_sistema, sigma_sistema) * 100
+cum_bueno_teo <- pnorm(sla_bueno, mu_sistema, sigma_sistema) * 100
+cum_aceptable_teo <- pnorm(sla_aceptable, mu_sistema, sigma_sistema) * 100
+sobre_inaceptable_teo <- (1 - pnorm(sla_inaceptable, mu_sistema, sigma_sistema)) * 100
+
+
+cat("Distribución: Tiempo ~ N(2.5, 0.8²) segundos\n")
+cat("Solicitudes analizadas:", n_validos, "\n\n")
+
+cat("CUMPLIMIENTO DE SLA:\n")
+cat("• Excelente (< 1.5s): ", round(cumple_excelente, 1), "% (Teórico: ", round(cum_excelente_teo, 1), "%)\n")
+cat("• Bueno (< 3.0s): ", round(cumple_bueno, 1), "% (Teórico: ", round(cum_bueno_teo, 1), "%)\n")
+cat("• Aceptable (< 4.5s): ", round(cumple_aceptable, 1), "% (Teórico: ", round(cum_aceptable_teo, 1), "%)\n")
+cat("• Inaceptable (≥ 6.0s): ", round(sobre_inaceptable, 1), "% (Teórico: ", round(sobre_inaceptable_teo, 1), "%)\n\n")
+
+# Estadísticos del sistema
+media_observada <- mean(tiempos_respuesta)
+mediana_observada <- median(tiempos_respuesta)
+p95_observado <- quantile(tiempos_respuesta, 0.95)
+p99_observado <- quantile(tiempos_respuesta, 0.99)
+
+# Teóricos
+p95_teorico <- qnorm(0.95, mu_sistema, sigma_sistema)
+p99_teorico <- qnorm(0.99, mu_sistema, sigma_sistema)
+
+cat("MÉTRICAS DE RENDIMIENTO:\n")
+cat("• Tiempo promedio: ", round(media_observada, 3), "s (Teórico: ", mu_sistema, "s)\n")
+cat("• Tiempo mediano: ", round(mediana_observada, 3), "s (Teórico: ", mu_sistema, "s)\n")
+cat("• Percentil 95: ", round(p95_observado, 3), "s (Teórico: ", round(p95_teorico, 3), "s)\n")
+cat("• Percentil 99: ", round(p99_observado, 3), "s (Teórico: ", round(p99_teorico, 3), "s)\n")
+
+# Análisis de capacidad del sistema
+# ¿Qué porcentaje del tiempo el sistema responde en menos de 2 segundos?
+objetivo_2s <- pnorm(2, mu_sistema, sigma_sistema) * 100
+objetivo_2s_obs <- mean(tiempos_respuesta < 2) * 100
+
+cat("\nANÁLISIS DE CAPACIDAD:\n")
+cat("• Respuestas < 2s: ", round(objetivo_2s_obs, 1), "% (Teórico: ", round(objetivo_2s, 1), "%)\n")
+
+# Mejora del sistema: ¿Qué pasa si reducimos σ a 0.6?
+sigma_mejorado <- 0.6
+mejora_bueno <- pnorm(sla_bueno, mu_sistema, sigma_mejorado) * 100
+mejora_excelente <- pnorm(sla_excelente, mu_sistema, sigma_mejorado) * 100
+
+cat("• Con mejora (σ = 0.6): Bueno ", round(mejora_bueno, 1), "%, Excelente ", round(mejora_excelente, 1), "%\n")
+
+# Visualización
+ggplot(data.frame(tiempo = tiempos_respuesta), aes(x = tiempo)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 50, 
+                 fill = "lightgreen", color = "black", alpha = 0.7) +
+  stat_function(fun = dnorm, args = list(mean = mu_sistema, sd = sigma_sistema),
+                color = "darkgreen", linewidth = 2) +
+  geom_vline(xintercept = c(sla_excelente, sla_bueno, sla_aceptable, sla_inaceptable), 
+             color = c("green", "orange", "red", "darkred"), 
+             linewidth = c(2, 2, 2, 2), linetype = "dashed") +
+  geom_vline(xintercept = mu_sistema, color = "blue", linewidth = 2) +
+  annotate("text", x = sla_excelente, y = 0.4, label = "Excelente\n< 1.5s", 
+           color = "green", size = 3, angle = 90, vjust = -0.5) +
+  annotate("text", x = sla_bueno, y = 0.35, label = "Bueno\n< 3.0s", 
+           color = "orange", size = 3, angle = 90, vjust = -0.5) +
+  annotate("text", x = sla_aceptable, y = 0.3, label = "Aceptable\n< 4.5s", 
+           color = "red", size = 3, angle = 90, vjust = -0.5) +
+  labs(title = "Análisis de Tiempos de Respuesta del Sistema",
+       subtitle = "Líneas verticales indican niveles de SLA",
+       x = "Tiempo de respuesta (segundos)",
+       y = "Densidad") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5)) +
+  xlim(0, 7)
+```
+
+:::
+
+## Ejercicios Propuestos
+
+
+::: {#exr-altura}
+
+### Análisis de Altura de Estudiantes
+
+Las alturas de estudiantes universitarios siguen una distribución normal con media $\mu = 170 cm$ y desviación estándar $\sigma = 8 cm$.
+
+1. Simula una muestra de 500 estudiantes
+2. Calcula la media, mediana y desviación estándar muestral
+3. ¿Qué porcentaje de estudiantes mide más de 180 cm?
+4. ¿Cuál es la altura del estudiante en el percentil 25?
+5. Crea un histograma de la muestra con la densidad teórica superpuesta
+
+:::
+
+---
+
+
+::: {#exr-temperatura}
+
+### Control de Temperatura Industrial 
+
+Un proceso industrial debe mantener la temperatura a 350°C ± 10°C. Las temperaturas siguen $N(350, 5^2)$.
+
+
+1. Simular un día de producción (1000 mediciones)
+2. ¿Qué porcentaje del tiempo la temperatura está fuera de especificación?
+3. Si el proceso se descentra a $\mu = 355°C$, ¿cómo cambia la calidad?
+4. ¿Qué $\sigma$ se necesita para tener 99.9% de productos dentro de especificación?
+
+:::
+
+---
+
+
+::: {#exr-ventas}
+
+### Análisis de Ventas Mensuales
+
+Las ventas mensuales de una tienda siguen $N(50000, 12000^2)$ pesos.
+
+**Tareas**:
+
+1. Simula las ventas de 24 meses
+2. ¿Cuál es la probabilidad de tener ventas superiores a 60,000 pesos?
+3. ¿En cuántos meses se espera tener ventas por debajo de 30,000 pesos?
+4. Calcula el rango intercuartílico de las ventas
+5. Si la meta es superar 45,000 pesos, ¿qué porcentaje de meses se cumple?
+
+```{r}
+media_exr <- 50000
+sd_exr <- 12000
+
+ventas_simuladas <- tibble(
+  mes = 1:24,
+  ventas = rnorm(24, mean = media_exr, sd = sd_exr)
+)
+
+ggplot(ventas_simuladas)+
+  geom_histogram(aes(ventas), bins = 15, fill ="#ED3DDD", alpha =0.3, color = "black", center = media_exr)+
+  theme_bw()
+  
+  
+
+
+  
+  
+  
+  
+
+
+```
+```{r}
+cat("Probabilidad ventas > 60000 =", pnorm(60000, media_exr, sd_exr, lower.tail = FALSE) )
+
+ggplot()+
+  geom_function(fun = dnorm, args =list(mean =media_exr, sd = sd_exr), xlim = c(2000, 98000), color ="firebrick", linewidth = 1.2)+
+  stat_function(fun = dnorm, args =list(mean =media_exr, sd = sd_exr), geom = "area", xlim = c(60000, 98000), fill ="olivedrab3", linewidth = 1.2, alpha = 0.5)+
+  annotate(geom ="label", x = 60000, y= 0.00001, label = paste("P(Ventas>60000)=", round(pnorm(60000, media_exr, sd_exr, lower.tail = FALSE),5)))+
+  theme_bw()
+
+
+```
+
+
+
+
+:::
+
+
+
+
+::: {#exr-baterias}
+
+### Tiempo de Vida de Baterías 
+
+La duración de baterías sigue $N(1200, 150^2)$ horas.
+
+
+1. Simula la vida útil de 800 baterías
+2. ¿Qué garantía (en horas) cubre al 95% de las baterías?
+3. Si se venden 10,000 baterías con garantía de 900 horas, ¿cuántas se espera que fallen?
+4. Compara la media y mediana de tu simulación con los valores teóricos
+5. ¿Cuál es el percentil 10 de la distribución?
+
+```{r}
+# Análisis del Tiempo de Vida de Baterías
+
+# Parámetros de la distribución normal
+media <- 1200  # horas
+desviacion <- 150  # horas
+n <- 800  # número de baterías a simular
+
+# 1. Simular la vida útil de 800 baterías
+set.seed(789)
+vida_util <- rnorm(n, mean = media, sd = desviacion)
+
+# Asegurar que los valores sean positivos (no puede haber vida útil negativa)
+vida_util <- pmax(vida_util, 0)  # Reemplazar valores negativos por 0
+
+cat("=== SIMULACIÓN DE VIDA ÚTIL DE BATERÍAS ===\n")
+cat("Parámetros:\n")
+cat("  Media poblacional (μ):", media, "horas\n")
+cat("  Desviación estándar (σ):", desviacion, "horas\n")
+cat("  Número de baterías simuladas:", n, "\n\n")
+
+# Resumen estadístico de la simulación
+cat("Estadísticas descriptivas de la simulación:\n")
+cat("  Media muestral:", round(mean(vida_util), 2), "horas\n")
+cat("  Mediana muestral:", round(median(vida_util), 2), "horas\n")
+cat("  Desviación estándar muestral:", round(sd(vida_util), 2), "horas\n")
+cat("  Mínimo:", round(min(vida_util), 2), "horas\n")
+cat("  Máximo:", round(max(vida_util), 2), "horas\n")
+cat("  Rango intercuartílico (IQR):", 
+    round(quantile(vida_util, 0.75) - quantile(vida_util, 0.25), 2), "horas\n\n")
+
+# 2. ¿Qué garantía (en horas) cubre al 95% de las baterías?
+# Esto significa: encontrar el percentil 5 (el 95% dura más que este valor)
+garantia_95 <- qnorm(0.05, mean = media, sd = desviacion)
+garantia_95_muestral <- quantile(vida_util, 0.05)
+
+cat("=== GARANTÍA QUE CUBRE AL 95% DE LAS BATERÍAS ===\n")
+cat("Interpretación: El 95% de las baterías durará MÁS que este valor\n")
+cat("  Garantía teórica (percentil 5):", round(garantia_95, 2), "horas\n")
+cat("  Garantía muestral (percentil 5):", round(garantia_95_muestral, 2), "horas\n")
+cat("  Esto significa que solo el 5% de las baterías fallará antes de", 
+    round(garantia_95, 2), "horas\n\n")
+
+# 3. Si se venden 10,000 baterías con garantía de 900 horas, ¿cuántas se espera que fallen?
+garantia <- 900  # horas
+
+# Probabilidad de que una batería falle antes de 900 horas
+prob_falla_teorica <- pnorm(garantia, mean = media, sd = desviacion)
+num_baterias_total <- 10000
+esperado_fallas_teorico <- prob_falla_teorica * num_baterias_total
+
+# Usando la simulación
+prob_falla_muestral <- sum(vida_util < garantia) / n
+esperado_fallas_muestral <- prob_falla_muestral * num_baterias_total
+
+cat("=== ANÁLISIS DE GARANTÍA DE 900 HORAS ===\n")
+cat("Garantía ofrecida:", garantia, "horas\n")
+cat("Probabilidad teórica de falla antes de", garantia, "horas:", 
+    round(prob_falla_teorica, 4), "(", round(prob_falla_teorica * 100, 2), "%)\n")
+cat("Probabilidad muestral de falla antes de", garantia, "horas:", 
+    round(prob_falla_muestral, 4), "(", round(prob_falla_muestral * 100, 2), "%)\n")
+cat("\nPara", format(num_baterias_total, big.mark = ","), "baterías vendidas:\n")
+cat("  Fallas teóricas esperadas:", round(esperado_fallas_teorico, 0), "\n")
+cat("  Fallas muestrales esperadas:", round(esperado_fallas_muestral, 0), "\n")
+cat("  Esto representa aproximadamente", round(esperado_fallas_teorico/num_baterias_total * 100, 2), 
+    "% del total\n\n")
+
+# 4. Comparar la media y mediana de la simulación con los valores teóricos
+media_teorica <- media
+mediana_teorica <- media  # En distribución normal, media = mediana
+media_muestral <- mean(vida_util)
+mediana_muestral <- median(vida_util)
+
+diferencia_media <- media_muestral - media_teorica
+diferencia_mediana <- mediana_muestral - mediana_teorica
+error_relativo_media <- (diferencia_media / media_teorica) * 100
+error_relativo_mediana <- (diferencia_mediana / mediana_teorica) * 100
+
+cat("=== COMPARACIÓN MEDIA Y MEDIANA ===\n")
+cat("Parámetro          Teórico     Muestral     Diferencia     Error Relativo\n")
+cat("-----------------------------------------------------------------------\n")
+cat(sprintf("Media           %8.2f    %8.2f     %8.2f        %6.2f%%\n", 
+            media_teorica, media_muestral, diferencia_media, error_relativo_media))
+cat(sprintf("Mediana         %8.2f    %8.2f     %8.2f        %6.2f%%\n", 
+            mediana_teorica, mediana_muestral, diferencia_mediana, error_relativo_mediana))
+cat("\n")
+
+# 5. ¿Cuál es el percentil 10 de la distribución?
+percentil_10_teorico <- qnorm(0.10, mean = media, sd = desviacion)
+percentil_10_muestral <- quantile(vida_util, 0.10)
+
+cat("=== PERCENTIL 10 DE LA DISTRIBUCIÓN ===\n")
+cat("Interpretación: El 10% de las baterías dura MENOS que este valor\n")
+cat("  Percentil 10 teórico:", round(percentil_10_teorico, 2), "horas\n")
+cat("  Percentil 10 muestral:", round(percentil_10_muestral, 2), "horas\n")
+cat("  Diferencia:", round(percentil_10_muestral - percentil_10_teorico, 2), "horas\n\n")
+
+# VISUALIZACIONES
+par(mfrow = c(2, 2))
+
+# Gráfico 1: Histograma con densidad teórica
+hist(vida_util, breaks = 30, freq = FALSE, 
+     col = "lightblue", border = "white",
+     main = "Distribución de Vida Útil de Baterías",
+     xlab = "Horas de vida útil", ylab = "Densidad",
+     xlim = c(max(0, media - 4*desviacion), media + 4*desviacion))
+
+# Curva teórica normal
+x <- seq(max(0, media - 4*desviacion), media + 4*desviacion, length.out = 1000)
+y <- dnorm(x, mean = media, sd = desviacion)
+lines(x, y, col = "red", lwd = 2)
+
+# Líneas verticales importantes
+abline(v = media, col = "darkgreen", lwd = 2, lty = 2)  # Media
+abline(v = garantia, col = "purple", lwd = 2, lty = 2)  # Garantía 900h
+abline(v = garantia_95, col = "orange", lwd = 2, lty = 2)  # Garantía 95%
+abline(v = percentil_10_teorico, col = "brown", lwd = 2, lty = 3)  # Percentil 10
+
+legend("topright", 
+       legend = c("Densidad teórica", 
+                  paste("Media (", round(media, 0), "h)"),
+                  paste("Garantía (", garantia, "h)"),
+                  paste("Garantía 95% (", round(garantia_95, 0), "h)"),
+                  paste("Percentil 10 (", round(percentil_10_teorico, 0), "h)")),
+       col = c("red", "darkgreen", "purple", "orange", "brown"),
+       lwd = 2, lty = c(1, 2, 2, 2, 3), cex = 0.8)
+
+# Gráfico 2: Q-Q plot para verificar normalidad
+qqnorm(vida_util, pch = 19, cex = 0.6, col = "blue",
+       main = "Q-Q Plot: Verificación de Normalidad",
+       xlab = "Cuantiles teóricos", ylab = "Cuantiles muestrales")
+qqline(vida_util, col = "red", lwd = 2)
+
+# Realizar prueba de Shapiro-Wilk para normalidad
+shapiro_test <- shapiro.test(vida_util)
+mtext(paste("Shapiro-Wilk p =", round(shapiro_test$p.value, 4)),
+      side = 3, line = 0.5, cex = 0.8)
+
+# Gráfico 3: Función de distribución acumulada (CDF)
+plot(ecdf(vida_util), 
+     main = "Función de Distribución Acumulada (CDF)",
+     xlab = "Horas de vida útil", ylab = "Probabilidad acumulada",
+     col = "blue", lwd = 2)
+
+# CDF teórica
+x_cdf <- seq(max(0, media - 4*desviacion), media + 4*desviacion, length.out = 1000)
+y_cdf <- pnorm(x_cdf, mean = media, sd = desviacion)
+lines(x_cdf, y_cdf, col = "red", lwd = 2, lty = 2)
+
+# Marcadores importantes
+points(garantia, prob_falla_teorica, col = "purple", pch = 19, cex = 1.5)
+points(garantia_95, 0.05, col = "orange", pch = 19, cex = 1.5)
+points(percentil_10_teorico, 0.10, col = "brown", pch = 19, cex = 1.5)
+
+abline(h = c(0.05, 0.10, prob_falla_teorica), 
+       col = c("orange", "brown", "purple"), 
+       lty = 3, lwd = 1)
+
+legend("topleft", 
+       legend = c("CDF muestral", "CDF teórica", 
+                  paste("Garantía ", garantia, "h: P =", round(prob_falla_teorica, 3)),
+                  "Garantía 95%: P = 0.05",
+                  "Percentil 10: P = 0.10"),
+       col = c("blue", "red", "purple", "orange", "brown"),
+       lwd = c(2, 2, NA, NA, NA), 
+       lty = c(1, 2, NA, NA, NA),
+       pch = c(NA, NA, 19, 19, 19),
+       cex = 0.8)
+
+# Gráfico 4: Análisis de garantías y fallas
+valores_garantia <- seq(600, 1500, by = 50)
+prob_fallas <- pnorm(valores_garantia, mean = media, sd = desviacion)
+fallas_esperadas <- prob_fallas * num_baterias_total
+
+plot(valores_garantia, fallas_esperadas, type = "l", 
+     col = "darkred", lwd = 2,
+     main = "Fallas Esperadas vs Garantía Ofrecida",
+     xlab = "Garantía (horas)", ylab = paste("Fallas esperadas en", 
+                                           format(num_baterias_total, big.mark = ","), 
+                                           "baterías"),
+     ylim = c(0, max(fallas_esperadas) * 1.1))
+
+# Puntos importantes
+points(garantia, esperado_fallas_teorico, col = "purple", pch = 19, cex = 1.5)
+points(garantia_95, 0.05 * num_baterias_total, col = "orange", pch = 19, cex = 1.5)
+
+abline(v = garantia, col = "purple", lty = 2, lwd = 1)
+abline(v = garantia_95, col = "orange", lty = 2, lwd = 1)
+abline(h = esperado_fallas_teorico, col = "purple", lty = 3, lwd = 1)
+abline(h = 0.05 * num_baterias_total, col = "orange", lty = 3, lwd = 1)
+
+legend("topright", 
+       legend = c(paste("Garantía actual (", garantia, "h):", 
+                        round(esperado_fallas_teorico), "fallas"),
+                  paste("Garantía 95% (", round(garantia_95), "h):", 
+                        round(0.05 * num_baterias_total), "fallas")),
+       col = c("purple", "orange"), pch = 19, cex = 0.8)
+
+par(mfrow = c(1, 1))
+
+# TABLA RESUMEN DE RESULTADOS IMPORTANTES
+cat("=== TABLA RESUMEN DE RESULTADOS ===\n")
+cat("Parámetro                     Valor Teórico   Valor Muestral   Diferencia\n")
+cat("------------------------------------------------------------------------\n")
+cat(sprintf("Media (horas)              %10.2f      %10.2f      %10.2f\n",
+            media_teorica, media_muestral, diferencia_media))
+cat(sprintf("Mediana (horas)            %10.2f      %10.2f      %10.2f\n",
+            mediana_teorica, mediana_muestral, diferencia_mediana))
+cat(sprintf("Percentil 5 (garantía 95%%) %10.2f      %10.2f      %10.2f\n",
+            garantia_95, garantia_95_muestral, garantia_95_muestral - garantia_95))
+cat(sprintf("Percentil 10                %10.2f      %10.2f      %10.2f\n",
+            percentil_10_teorico, percentil_10_muestral, 
+            percentil_10_muestral - percentil_10_teorico))
+cat(sprintf("P(falla < 900h)           %10.4f      %10.4f      %10.4f\n",
+            prob_falla_teorica, prob_falla_muestral, 
+            prob_falla_muestral - prob_falla_teorica))
+cat("\n")
+
+# ANÁLISIS DE RIESGO ADICIONAL
+cat("=== ANÁLISIS DE RIESGO ADICIONAL ===\n")
+
+# Probabilidad de diferentes escenarios
+cat("Probabilidades importantes:\n")
+cat("1. P(Vida < 1000h):", round(pnorm(1000, media, desviacion), 4), 
+    "(", round(pnorm(1000, media, desviacion) * 100, 1), "%)\n")
+cat("2. P(Vida > 1400h):", round(1 - pnorm(1400, media, desviacion), 4), 
+    "(", round((1 - pnorm(1400, media, desviacion)) * 100, 1), "%)\n")
+cat("3. P(1000h < Vida < 1400h):", 
+    round(pnorm(1400, media, desviacion) - pnorm(1000, media, desviacion), 4),
+    "(", round((pnorm(1400, media, desviacion) - pnorm(1000, media, desviacion)) * 100, 1), "%)\n")
+
+# Garantía que cubre diferentes porcentajes
+porcentajes <- c(0.90, 0.95, 0.99)
+cat("\nGarantías para diferentes coberturas:\n")
+for (p in porcentajes) {
+  garantia_p <- qnorm(1-p, media, desviacion)  # Percentil (1-p)
+  cat(sprintf("  Cobertura %.0f%%: garantía de %.0f horas (percentil %.0f)\n", 
+              p*100, garantia_p, (1-p)*100))
+}
+
+# RECOMENDACIONES PARA LA EMPRESA
+cat("\n=== RECOMENDACIONES ===\n")
+cat("1. La garantía actual de 900 horas resultará en aproximadamente", 
+    round(esperado_fallas_teorico/num_baterias_total * 100, 1), "% de fallas\n")
+cat("2. Para cubrir al 95% de las baterías, ofrecer garantía de", 
+    round(garantia_95, 0), "horas\n")
+cat("3. El percentil 10 indica que el 10% de las baterías fallará antes de", 
+    round(percentil_10_teorico, 0), "horas\n")
+cat("4. Considerar ofrecer diferentes garantías según el segmento de mercado\n")
+```
+
+
+
+:::
+
+---
+
+::: {#exr-errores_medicion}
+
+
+### Análisis de Errores de Medición
+
+Los errores de un instrumento de medición siguen $N(0, 2.5^5)$ unidades.
+
+
+1. Simula 1000 mediciones
+2. ¿Qué porcentaje de errores está entre -5 y +5 unidades?
+3. Calcula la probabilidad de que un error sea mayor a 6 unidades en valor absoluto
+4. Si se considera "preciso" un error ≤ 3 unidades, ¿qué porcentaje de mediciones son precisas?
+5. Verifica que la distribución es simétrica alrededor de 0
+
+
+
+```{r}
+# Análisis de Errores de Medición
+
+# Parámetros de la distribución normal
+media <- 0  # Error medio (sesgo)
+desviacion <- 2.5  # Desviación estándar en unidades
+n <- 1000  # número de mediciones a simular
+
+# 1. Simular 1000 mediciones
+set.seed(123)
+errores <- rnorm(n, mean = media, sd = desviacion)
+
+cat("=== ANÁLISIS DE ERRORES DE MEDICIÓN ===\n")
+cat("Parámetros del instrumento:\n")
+cat("  Distribución: N(", media, ", ", desviacion, "²)\n", sep = "")
+cat("  Media poblacional (sesgo):", media, "unidades\n")
+cat("  Desviación estándar:", desviacion, "unidades\n")
+cat("  Número de mediciones simuladas:", n, "\n\n")
+
+# Resumen estadístico de la simulación
+cat("Estadísticas descriptivas de los errores:\n")
+cat("  Media muestral:", round(mean(errores), 4), "unidades\n")
+cat("  Mediana muestral:", round(median(errores), 4), "unidades\n")
+cat("  Desviación estándar muestral:", round(sd(errores), 4), "unidades\n")
+cat("  Mínimo:", round(min(errores), 4), "unidades\n")
+cat("  Máximo:", round(max(errores), 4), "unidades\n")
+cat("  Rango:", round(max(errores) - min(errores), 4), "unidades\n")
+cat("  Rango intercuartílico (IQR):", 
+    round(quantile(errores, 0.75) - quantile(errores, 0.25), 4), "unidades\n\n")
+
+# 2. ¿Qué porcentaje de errores está entre -5 y +5 unidades?
+limite_inf <- -5
+limite_sup <- 5
+
+porcentaje_entre_teorico <- pnorm(limite_sup, media, desviacion) - 
+                           pnorm(limite_inf, media, desviacion)
+porcentaje_entre_muestral <- sum(errores >= limite_inf & errores <= limite_sup) / n
+
+cat("=== PORCENTAJE DE ERRORES ENTRE -5 Y +5 UNIDADES ===\n")
+cat("Límite inferior:", limite_inf, "unidades\n")
+cat("Límite superior:", limite_sup, "unidades\n")
+cat("  Porcentaje teórico:", round(porcentaje_entre_teorico * 100, 2), "%\n")
+cat("  Porcentaje muestral:", round(porcentaje_entre_muestral * 100, 2), "%\n")
+cat("  Número de errores en el rango:", sum(errores >= limite_inf & errores <= limite_sup), "\n\n")
+
+# 3. Calcula la probabilidad de que un error sea mayor a 6 unidades en valor absoluto
+limite_absoluto <- 6
+
+# Probabilidad de |error| > 6 = P(error < -6) + P(error > 6)
+prob_abs_teorica <- pnorm(-limite_absoluto, media, desviacion) + 
+                   (1 - pnorm(limite_absoluto, media, desviacion))
+prob_abs_muestral <- sum(abs(errores) > limite_absoluto) / n
+
+cat("=== PROBABILIDAD DE ERROR > 6 UNIDADES EN VALOR ABSOLUTO ===\n")
+cat("Límite absoluto: |error| >", limite_absoluto, "unidades\n")
+cat("  Probabilidad teórica:", round(prob_abs_teorica, 4), 
+    "(", round(prob_abs_teorica * 100, 2), "%)\n")
+cat("  Probabilidad muestral:", round(prob_abs_muestral, 4), 
+    "(", round(prob_abs_muestral * 100, 2), "%)\n")
+cat("  Número de errores con |error| >", limite_absoluto, ":", 
+    sum(abs(errores) > limite_absoluto), "\n\n")
+
+# 4. Si se considera "preciso" un error ≤ 3 unidades, ¿qué porcentaje de mediciones son precisas?
+limite_preciso <- 3
+
+# Error ≤ 3 en valor absoluto: |error| ≤ 3
+prob_preciso_teorica <- pnorm(limite_preciso, media, desviacion) - 
+                       pnorm(-limite_preciso, media, desviacion)
+prob_preciso_muestral <- sum(abs(errores) <= limite_preciso) / n
+
+cat("=== PORCENTAJE DE MEDICIONES PRECISAS (|error| ≤ 3) ===\n")
+cat("Criterio de precisión: |error| ≤", limite_preciso, "unidades\n")
+cat("  Porcentaje teórico de mediciones precisas:", 
+    round(prob_preciso_teorica * 100, 2), "%\n")
+cat("  Porcentaje muestral de mediciones precisas:", 
+    round(prob_preciso_muestral * 100, 2), "%\n")
+cat("  Número de mediciones precisas:", sum(abs(errores) <= limite_preciso), "\n\n")
+
+# 5. Verifica que la distribución es simétrica alrededor de 0
+cat("=== VERIFICACIÓN DE SIMETRÍA ALREDEDOR DE 0 ===\n")
+
+# Método 1: Comparar percentiles simétricos
+percentiles <- c(0.10, 0.25, 0.40)
+cat("\nMétodo 1: Comparación de percentiles simétricos\n")
+cat("Percentil  Teórico (-)  Teórico (+)  Muestral (-)  Muestral (+)  Diferencia\n")
+cat("---------------------------------------------------------------------------\n")
+
+for (p in percentiles) {
+  # Percentiles teóricos
+  perc_neg_teorico <- qnorm(p, media, desviacion)
+  perc_pos_teorico <- qnorm(1-p, media, desviacion)
+  
+  # Percentiles muestrales
+  perc_neg_muestral <- quantile(errores, p)
+  perc_pos_muestral <- quantile(errores, 1-p)
+  
+  # Diferencia en valor absoluto (debería ser simétrico)
+  dif_teorica <- abs(perc_neg_teorico) - abs(perc_pos_teorico)
+  dif_muestral <- abs(perc_neg_muestral) - abs(perc_pos_muestral)
+  
+  cat(sprintf("%6.2f      %8.4f      %8.4f      %8.4f      %8.4f      %8.4f\n",
+              p, perc_neg_teorico, perc_pos_teorico, 
+              perc_neg_muestral, perc_pos_muestral, dif_muestral))
+}
+
+# Método 2: Comparar proporciones en intervalos simétricos
+cat("\nMétodo 2: Proporciones en intervalos simétricos\n")
+intervalos <- c(1, 2, 3, 4)
+
+for (lim in intervalos) {
+  prop_neg <- sum(errores < -lim & errores >= -(lim+1)) / n
+  prop_pos <- sum(errores > lim & errores <= (lim+1)) / n
+  dif_prop <- prop_pos - prop_neg
+  
+  cat(sprintf("Intervalo [%d, %d]: Neg=%.4f, Pos=%.4f, Diferencia=%.4f\n",
+              lim, lim+1, prop_neg, prop_pos, dif_prop))
+}
+
+# Método 3: Prueba de simetría estadística
+# Coeficiente de asimetría (skewness) - debería ser cercano a 0
+if (!require("moments")) install.packages("moments")
+library(moments)
+
+coef_asimetria <- skewness(errores)
+cat("\nMétodo 3: Coeficiente de asimetría (skewness)\n")
+cat("  Coeficiente de asimetría muestral:", round(coef_asimetria, 4), "\n")
+cat("  Interpretación:\n")
+cat("    ≈ 0: Distribución simétrica\n")
+cat("    > 0: Asimetría positiva (cola derecha más larga)\n")
+cat("    < 0: Asimetría negativa (cola izquierda más larga)\n")
+
+# Prueba formal de simetría
+# Podemos usar una prueba de signos para la mediana
+prueba_simetria <- wilcox.test(errores, mu = 0)
+cat("  Prueba de Wilcoxon (mediana = 0): p =", round(prueba_simetria$p.value, 4), "\n")
+if (prueba_simetria$p.value > 0.05) {
+  cat("  No hay evidencia para rechazar la simetría alrededor de 0 ✓\n")
+} else {
+  cat("  Hay evidencia de asimetría alrededor de 0 ✗\n")
+}
+
+# VISUALIZACIONES
+par(mfrow = c(2, 3))
+
+# Gráfico 1: Histograma con densidad teórica
+hist(errores, breaks = 30, freq = FALSE, 
+     col = "lightblue", border = "white",
+     main = "Distribución de Errores de Medición",
+     xlab = "Error (unidades)", ylab = "Densidad",
+     xlim = c(-4*desviacion, 4*desviacion))
+
+# Curva teórica normal
+x <- seq(-4*desviacion, 4*desviacion, length.out = 1000)
+y <- dnorm(x, mean = media, sd = desviacion)
+lines(x, y, col = "red", lwd = 2)
+
+# Líneas verticales importantes
+abline(v = 0, col = "black", lwd = 2, lty = 1)  # Línea central
+abline(v = c(-limite_preciso, limite_preciso), col = "green", lwd = 2, lty = 2)  # Precisión
+abline(v = c(-5, 5), col = "orange", lwd = 2, lty = 3)  # Rango -5 a 5
+abline(v = c(-6, 6), col = "purple", lwd = 1, lty = 4)  # Límite absoluto
+
+legend("topright", 
+       legend = c("Densidad teórica", 
+                  "Media (0)",
+                  paste("Precisión (±", limite_preciso, ")"),
+                  "Rango [-5, 5]",
+                  paste("Límite |error| >", limite_absoluto)),
+       col = c("red", "black", "green", "orange", "purple"),
+       lwd = c(2, 2, 2, 2, 1), 
+       lty = c(1, 1, 2, 3, 4),
+       cex = 0.7)
+
+# Gráfico 2: Distribución acumulada (CDF)
+plot(ecdf(errores), 
+     main = "Función de Distribución Acumulada",
+     xlab = "Error (unidades)", ylab = "Probabilidad acumulada",
+     col = "blue", lwd = 2)
+
+# CDF teórica
+lines(x, pnorm(x, media, desviacion), col = "red", lwd = 2, lty = 2)
+
+# Marcadores importantes
+points(c(-limite_preciso, limite_preciso), 
+       c(pnorm(-limite_preciso, media, desviacion), 
+         pnorm(limite_preciso, media, desviacion)),
+       col = "green", pch = 19, cex = 1.2)
+
+points(c(-5, 5), 
+       c(pnorm(-5, media, desviacion), pnorm(5, media, desviacion)),
+       col = "orange", pch = 19, cex = 1.2)
+
+legend("topleft", 
+       legend = c("CDF muestral", "CDF teórica", 
+                  paste("Precisión (±", limite_preciso, ")"),
+                  "Límites ±5"),
+       col = c("blue", "red", "green", "orange"),
+       lwd = c(2, 2, NA, NA), 
+       lty = c(1, 2, NA, NA),
+       pch = c(NA, NA, 19, 19),
+       cex = 0.7)
+
+# Gráfico 3: Q-Q plot para verificar normalidad
+qqnorm(errores, pch = 19, cex = 0.6, col = "blue",
+       main = "Q-Q Plot: Verificación de Normalidad",
+       xlab = "Cuantiles teóricos", ylab = "Cuantiles muestrales")
+qqline(errores, col = "red", lwd = 2)
+
+# Prueba de normalidad
+shapiro_test <- shapiro.test(errores)
+mtext(paste("Shapiro-Wilk p =", round(shapiro_test$p.value, 4)),
+      side = 3, line = 0.5, cex = 0.8)
+
+# Gráfico 4: Errores en valor absoluto
+errores_abs <- abs(errores)
+hist(errores_abs, breaks = 30, freq = FALSE, 
+     col = "lightcoral", border = "white",
+     main = "Distribución de |Error| (Valor Absoluto)",
+     xlab = "|Error| (unidades)", ylab = "Densidad")
+
+# Densidad teórica de |X| donde X ~ N(0, σ²)
+# f|X|(x) = 2 * φ(x/σ) / σ, para x ≥ 0
+x_abs <- seq(0, max(errores_abs), length.out = 1000)
+y_abs <- 2 * dnorm(x_abs, mean = 0, sd = desviacion)
+lines(x_abs, y_abs, col = "darkred", lwd = 2)
+
+abline(v = limite_preciso, col = "green", lwd = 2, lty = 2)
+abline(v = limite_absoluto, col = "purple", lwd = 2, lty = 3)
+
+legend("topright", 
+       legend = c("Densidad muestral", "Densidad teórica",
+                  paste("Precisión (", limite_preciso, ")"),
+                  paste("Límite (", limite_absoluto, ")")),
+       col = c("lightcoral", "darkred", "green", "purple"),
+       lwd = c(NA, 2, 2, 2), 
+       lty = c(NA, 1, 2, 3),
+       fill = c("lightcoral", NA, NA, NA),
+       border = c("white", NA, NA, NA),
+       cex = 0.7)
+
+# Gráfico 5: Porcentajes acumulados por categorías
+categorias <- c("|Error| ≤ 1", "1 < |Error| ≤ 2", "2 < |Error| ≤ 3", 
+                "3 < |Error| ≤ 4", "4 < |Error| ≤ 5", "|Error| > 5")
+limites <- c(1, 2, 3, 4, 5)
+
+conteos <- numeric(length(categorias))
+for (i in 1:length(categorias)) {
+  if (i == 1) {
+    conteos[i] <- sum(abs(errores) <= limites[i])
+  } else if (i == length(categorias)) {
+    conteos[i] <- sum(abs(errores) > limites[i-1])
+  } else {
+    conteos[i] <- sum(abs(errores) > limites[i-1] & abs(errores) <= limites[i])
+  }
+}
+
+porcentajes <- conteos / n * 100
+
+barplot(porcentajes, names.arg = categorias, las = 2,
+        col = rainbow(length(categorias), alpha = 0.7),
+        main = "Distribución por Magnitud de Error",
+        ylab = "Porcentaje (%)",
+        ylim = c(0, max(porcentajes) * 1.2))
+
+text(1:length(categorias), porcentajes + 2, 
+     paste(round(porcentajes, 1), "%"), cex = 0.7)
+
+# Gráfico 6: Verificación de simetría
+# Diagrama de dispersión de errores negativos vs positivos
+errores_neg <- errores[errores < 0]
+errores_pos <- errores[errores > 0]
+
+# Ordenar por magnitud
+errores_neg_sorted <- sort(errores_neg, decreasing = TRUE)  # De menos negativo a -0
+errores_pos_sorted <- sort(errores_pos)  # De 0 a más positivo
+
+# Tomar el mismo número de puntos para comparación
+n_comparar <- min(length(errores_neg_sorted), length(errores_pos_sorted))
+comparacion <- data.frame(
+  Negativos = abs(errores_neg_sorted[1:n_comparar]),
+  Positivos = errores_pos_sorted[1:n_comparar]
+)
+
+plot(comparacion$Negativos, comparacion$Positivos,
+     pch = 19, col = "blue", cex = 0.6,
+     main = "Verificación de Simetría\n|Errores Negativos| vs Errores Positivos",
+     xlab = "|Error negativo| (unidades)", 
+     ylab = "Error positivo (unidades)",
+     xlim = c(0, max(comparacion)),
+     ylim = c(0, max(comparacion)))
+abline(a = 0, b = 1, col = "red", lwd = 2, lty = 2)  # Línea y = x
+grid()
+
+correlacion <- cor(comparacion$Negativos, comparacion$Positivos)
+legend("topleft", 
+       legend = paste("Correlación =", round(correlacion, 4)),
+       bg = "white", cex = 0.8)
+
+par(mfrow = c(1, 1))
+
+# RESUMEN FINAL
+cat("\n=== RESUMEN FINAL DEL ANÁLISIS ===\n")
+cat("1. Distribución de errores: N(0, ", desviacion, "²)\n", sep = "")
+cat("2. Errores entre -5 y +5 unidades: ", 
+    round(porcentaje_entre_teorico * 100, 1), "% teórico, ",
+    round(porcentaje_entre_muestral * 100, 1), "% muestral\n", sep = "")
+cat("3. Probabilidad |error| > 6: ", 
+    round(prob_abs_teorica * 100, 2), "% teórico, ",
+    round(prob_abs_muestral * 100, 2), "% muestral\n", sep = "")
+cat("4. Mediciones precisas (|error| ≤ 3): ", 
+    round(prob_preciso_teorica * 100, 1), "% teórico, ",
+    round(prob_preciso_muestral * 100, 1), "% muestral\n", sep = "")
+cat("5. Simetría: Coeficiente de asimetría = ", round(coef_asimetria, 4), 
+    " (≈ 0 indica simetría)\n", sep = "")
+cat("\n=== INTERPRETACIÓN PARA EL CONTROL DE CALIDAD ===\n")
+cat("• El instrumento no tiene sesgo significativo (media ≈ 0)\n")
+cat("• Aproximadamente ", round(prob_preciso_teorica * 100, 0), 
+    "% de las mediciones son 'precisas' según el criterio\n", sep = "")
+cat("• Solo ", round(prob_abs_teorica * 100, 1), 
+    "% de los errores exceden 6 unidades en valor absoluto\n", sep = "")
+cat("• La distribución es simétrica, como se espera de un instrumento bien calibrado\n")
+
+```
+
+
+:::
+
+
+::: {#exr-examen_corporativo}
+
+### Puntuaciones de Examen Comparativo 
+
+Dos grupos toman el mismo examen. Grupo A: $N(75, 10^2)$, Grupo B: $N(82, 8^2)$.
+
+
+1. Simula 200 estudiantes de cada grupo
+2. ¿Qué porcentaje de estudiantes del Grupo A supera la media del Grupo B?
+3. ¿Cuál es la probabilidad de que un estudiante del Grupo B tenga puntuación menor a 70?
+4. Compara las distribuciones visualmente
+5. ¿A partir de qué puntuación está el 10% superior de cada grupo?
+
+
+```{r}
+# Análisis de Puntuaciones de Examen Comparativo
+
+# Parámetros de las distribuciones normales
+# Grupo A
+media_A <- 75
+sd_A <- 10
+
+# Grupo B
+media_B <- 82
+sd_B <- 8
+
+# Número de estudiantes por grupo
+n <- 200
+
+# 1. Simular 200 estudiantes de cada grupo
+set.seed(456)
+grupo_A <- rnorm(n, mean = media_A, sd = sd_A)
+grupo_B <- rnorm(n, mean = media_B, sd = sd_B)
+
+# Asegurar que las puntuaciones estén en un rango razonable (0-100)
+grupo_A <- pmax(0, pmin(100, grupo_A))
+grupo_B <- pmax(0, pmin(100, grupo_B))
+
+cat("=== ANÁLISIS DE PUNTUACIONES DE EXAMEN COMPARATIVO ===\n\n")
+cat("PARÁMETROS DE LOS GRUPOS:\n")
+cat("  Grupo A: N(", media_A, ", ", sd_A, "²)\n", sep = "")
+cat("  Grupo B: N(", media_B, ", ", sd_B, "²)\n", sep = "")
+cat("  Estudiantes por grupo:", n, "\n\n")
+
+# Estadísticas descriptivas
+cat("ESTADÍSTICAS DESCRIPTIVAS:\n")
+
+cat("Grupo A:\n")
+cat("  Media:", round(mean(grupo_A), 2), "\n")
+cat("  Mediana:", round(median(grupo_A), 2), "\n")
+cat("  Desviación estándar:", round(sd(grupo_A), 2), "\n")
+cat("  Mínimo:", round(min(grupo_A), 2), "\n")
+cat("  Máximo:", round(max(grupo_A), 2), "\n")
+cat("  Rango:", round(max(grupo_A) - min(grupo_A), 2), "\n\n")
+
+cat("Grupo B:\n")
+cat("  Media:", round(mean(grupo_B), 2), "\n")
+cat("  Mediana:", round(median(grupo_B), 2), "\n")
+cat("  Desviación estándar:", round(sd(grupo_B), 2), "\n")
+cat("  Mínimo:", round(min(grupo_B), 2), "\n")
+cat("  Máximo:", round(max(grupo_B), 2), "\n")
+cat("  Rango:", round(max(grupo_B) - min(grupo_B), 2), "\n\n")
+
+# 2. ¿Qué porcentaje de estudiantes del Grupo A supera la media del Grupo B?
+media_B_teorica <- media_B
+porcentaje_A_supera_B_teorico <- 1 - pnorm(media_B_teorica, mean = media_A, sd = sd_A)
+porcentaje_A_supera_B_muestral <- sum(grupo_A > media_B_teorica) / n
+
+cat("=== PORCENTAJE DEL GRUPO A QUE SUPERA LA MEDIA DEL GRUPO B ===\n")
+cat("Media del Grupo B (umbral):", media_B_teorica, "puntos\n")
+cat("  Porcentaje teórico:", round(porcentaje_A_supera_B_teorico * 100, 2), "%\n")
+cat("  Porcentaje muestral:", round(porcentaje_A_supera_B_muestral * 100, 2), "%\n")
+cat("  Número de estudiantes del Grupo A >", media_B_teorica, ":", 
+    sum(grupo_A > media_B_teorica), "\n\n")
+
+# 3. ¿Cuál es la probabilidad de que un estudiante del Grupo B tenga puntuación menor a 70?
+umbral <- 70
+prob_B_menor_70_teorica <- pnorm(umbral, mean = media_B, sd = sd_B)
+prob_B_menor_70_muestral <- sum(grupo_B < umbral) / n
+
+cat("=== PROBABILIDAD DE PUNTUACIÓN < 70 EN GRUPO B ===\n")
+cat("Umbral:", umbral, "puntos\n")
+cat("  Probabilidad teórica:", round(prob_B_menor_70_teorica, 4), 
+    "(", round(prob_B_menor_70_teorica * 100, 2), "%)\n")
+cat("  Probabilidad muestral:", round(prob_B_menor_70_muestral, 4), 
+    "(", round(prob_B_menor_70_muestral * 100, 2), "%)\n")
+cat("  Número de estudiantes del Grupo B <", umbral, ":", 
+    sum(grupo_B < umbral), "\n\n")
+
+# 5. ¿A partir de qué puntuación está el 10% superior de cada grupo?
+percentil_90_A_teorico <- qnorm(0.90, mean = media_A, sd = sd_A)
+percentil_90_B_teorico <- qnorm(0.90, mean = media_B, sd = sd_B)
+
+percentil_90_A_muestral <- quantile(grupo_A, 0.90)
+percentil_90_B_muestral <- quantile(grupo_B, 0.90)
+
+cat("=== PUNTUACIÓN DEL 10% SUPERIOR (PERCENTIL 90) ===\n")
+cat("Grupo A:\n")
+cat("  Teórico:", round(percentil_90_A_teorico, 2), "puntos\n")
+cat("  Muestral:", round(percentil_90_A_muestral, 2), "puntos\n")
+cat("  Diferencia:", round(percentil_90_A_muestral - percentil_90_A_teorico, 2), "\n\n")
+
+cat("Grupo B:\n")
+cat("  Teórico:", round(percentil_90_B_teorico, 2), "puntos\n")
+cat("  Muestral:", round(percentil_90_B_muestral, 2), "puntos\n")
+cat("  Diferencia:", round(percentil_90_B_muestral - percentil_90_B_teorico, 2), "\n\n")
+
+# ANÁLISIS ADICIONAL COMPARATIVO
+cat("=== ANÁLISIS COMPARATIVO ADICIONAL ===\n")
+
+# Probabilidad de que un estudiante de A supere a uno de B
+# P(A > B) = P(A - B > 0)
+# A ~ N(μ_A, σ_A²), B ~ N(μ_B, σ_B²)
+# A - B ~ N(μ_A - μ_B, σ_A² + σ_B²)
+
+media_diff <- media_A - media_B
+sd_diff <- sqrt(sd_A^2 + sd_B^2)
+prob_A_supera_B_teorica <- 1 - pnorm(0, mean = media_diff, sd = sd_diff)
+
+# Estimación muestral
+comparaciones <- 10000
+A_random <- rnorm(comparaciones, media_A, sd_A)
+B_random <- rnorm(comparaciones, media_B, sd_B)
+prob_A_supera_B_muestral <- sum(A_random > B_random) / comparaciones
+
+cat("Probabilidad de que un estudiante del Grupo A supere a uno del Grupo B:\n")
+cat("  Teórica (P(A > B)):", round(prob_A_supera_B_teorica, 4), 
+    "(", round(prob_A_supera_B_teorica * 100, 2), "%)\n")
+cat("  Muestral:", round(prob_A_supera_B_muestral, 4), 
+    "(", round(prob_A_supera_B_muestral * 100, 2), "%)\n\n")
+
+# Puntuación mínima para estar en el percentil 90 conjunto
+# Considerando ambos grupos como una población mixta
+puntuacion_conjunta <- c(grupo_A, grupo_B)
+percentil_90_conjunto <- quantile(puntuacion_conjunta, 0.90)
+
+cat("Puntuación para estar en el 10% superior considerando ambos grupos:\n")
+cat("  Percentil 90 conjunto:", round(percentil_90_conjunto, 2), "puntos\n")
+cat("  Número de estudiantes en el 10% superior:\n")
+cat("    Grupo A:", sum(grupo_A > percentil_90_conjunto), "\n")
+cat("    Grupo B:", sum(grupo_B > percentil_90_conjunto), "\n")
+cat("    Total:", sum(grupo_A > percentil_90_conjunto) + sum(grupo_B > percentil_90_conjunto), 
+    "(de", 2*n, "total)\n\n")
+
+# VISUALIZACIONES
+# Configurar espacio para múltiples gráficos
+par(mfrow = c(2, 3))
+
+# 4. Comparar las distribuciones visualmente
+
+# Gráfico 1: Histogramas superpuestos
+hist(grupo_A, breaks = 20, col = rgb(0, 0.5, 1, 0.5), 
+     main = "Distribución de Puntuaciones\nGrupo A vs Grupo B",
+     xlab = "Puntuación", ylab = "Frecuencia",
+     xlim = c(0, 100), border = "white")
+
+hist(grupo_B, breaks = 20, col = rgb(1, 0.5, 0, 0.5), 
+     add = TRUE, border = "white")
+
+abline(v = media_A, col = "blue", lwd = 3, lty = 2)
+abline(v = media_B, col = "orange", lwd = 3, lty = 2)
+
+legend("topright", 
+       legend = c("Grupo A", "Grupo B", 
+                  paste("Media A (", round(media_A, 1), ")"),
+                  paste("Media B (", round(media_B, 1), ")")),
+       fill = c(rgb(0, 0.5, 1, 0.5), rgb(1, 0.5, 0, 0.5), NA, NA),
+       border = c("white", "white", NA, NA),
+       col = c(NA, NA, "blue", "orange"),
+       lwd = c(NA, NA, 3, 3),
+       lty = c(NA, NA, 2, 2))
+
+# Gráfico 2: Densidades superpuestas
+plot(density(grupo_A), col = "blue", lwd = 3,
+     main = "Densidad de Puntuaciones\nGrupo A vs Grupo B",
+     xlab = "Puntuación", ylab = "Densidad",
+     xlim = c(0, 100), ylim = c(0, 0.06))
+
+lines(density(grupo_B), col = "orange", lwd = 3)
+
+# Curvas teóricas
+x <- seq(0, 100, length.out = 1000)
+lines(x, dnorm(x, media_A, sd_A), col = "blue", lwd = 2, lty = 2)
+lines(x, dnorm(x, media_B, sd_B), col = "orange", lwd = 2, lty = 2)
+
+# Líneas verticales importantes
+abline(v = media_B, col = "red", lwd = 2, lty = 3)
+abline(v = umbral, col = "purple", lwd = 2, lty = 4)
+
+legend("topright", 
+       legend = c("Grupo A (muestral)", "Grupo B (muestral)",
+                  "Grupo A (teórico)", "Grupo B (teórico)",
+                  paste("Media B (", media_B, ")"),
+                  paste("Umbral 70")),
+       col = c("blue", "orange", "blue", "orange", "red", "purple"),
+       lwd = c(3, 3, 2, 2, 2, 2),
+       lty = c(1, 1, 2, 2, 3, 4))
+
+# Gráfico 3: Boxplots comparativos
+boxplot(list("Grupo A" = grupo_A, "Grupo B" = grupo_B),
+        col = c(rgb(0, 0.5, 1, 0.7), rgb(1, 0.5, 0, 0.7)),
+        main = "Boxplot Comparativo\nGrupo A vs Grupo B",
+        ylab = "Puntuación",
+        ylim = c(0, 100))
+
+# Añadir puntos para las medias
+points(1:2, c(mean(grupo_A), mean(grupo_B)), 
+       col = "red", pch = 19, cex = 1.5)
+
+# Añadir estadísticas clave
+text(1, quantile(grupo_A, 0.25), 
+     paste("Q1:", round(quantile(grupo_A, 0.25), 1)), pos = 1, cex = 0.8)
+text(1, quantile(grupo_A, 0.75), 
+     paste("Q3:", round(quantile(grupo_A, 0.75), 1)), pos = 3, cex = 0.8)
+text(2, quantile(grupo_B, 0.25), 
+     paste("Q1:", round(quantile(grupo_B, 0.25), 1)), pos = 1, cex = 0.8)
+text(2, quantile(grupo_B, 0.75), 
+     paste("Q3:", round(quantile(grupo_B, 0.75), 1)), pos = 3, cex = 0.8)
+
+# Gráfico 4: Función de distribución acumulada (CDF)
+plot(ecdf(grupo_A), col = "blue", lwd = 3,
+     main = "Función de Distribución Acumulada (CDF)",
+     xlab = "Puntuación", ylab = "Probabilidad acumulada",
+     xlim = c(0, 100))
+
+lines(ecdf(grupo_B), col = "orange", lwd = 3)
+
+# CDFs teóricas
+lines(x, pnorm(x, media_A, sd_A), col = "blue", lwd = 2, lty = 2)
+lines(x, pnorm(x, media_B, sd_B), col = "orange", lwd = 2, lty = 2)
+
+# Líneas para percentil 90
+abline(v = percentil_90_A_teorico, col = "blue", lwd = 1, lty = 3)
+abline(v = percentil_90_B_teorico, col = "orange", lwd = 1, lty = 3)
+abline(h = 0.90, col = "gray", lwd = 1, lty = 2)
+
+legend("topleft", 
+       legend = c("Grupo A (muestral)", "Grupo B (muestral)",
+                  "Grupo A (teórico)", "Grupo B (teórico)",
+                  "Percentil 90 A", "Percentil 90 B"),
+       col = c("blue", "orange", "blue", "orange", "blue", "orange"),
+       lwd = c(3, 3, 2, 2, 1, 1),
+       lty = c(1, 1, 2, 2, 3, 3))
+
+# Gráfico 5: Q-Q plots para normalidad
+qqnorm(grupo_A, pch = 19, cex = 0.6, col = "blue",
+       main = "Q-Q Plot: Grupo A",
+       xlab = "Cuantiles teóricos", ylab = "Cuantiles muestrales")
+qqline(grupo_A, col = "red", lwd = 2)
+
+shapiro_A <- shapiro.test(grupo_A)
+mtext(paste("Shapiro-Wilk p =", round(shapiro_A$p.value, 4)),
+      side = 3, line = 0.5, cex = 0.8)
+
+# Gráfico 6: Q-Q plot para Grupo B
+qqnorm(grupo_B, pch = 19, cex = 0.6, col = "orange",
+       main = "Q-Q Plot: Grupo B",
+       xlab = "Cuantiles teóricos", ylab = "Cuantiles muestrales")
+qqline(grupo_B, col = "red", lwd = 2)
+
+shapiro_B <- shapiro.test(grupo_B)
+mtext(paste("Shapiro-Wilk p =", round(shapiro_B$p.value, 4)),
+      side = 3, line = 0.5, cex = 0.8)
+
+par(mfrow = c(1, 1))
+
+# Gráfico adicional: Comparación de percentiles
+percentiles <- seq(0.05, 0.95, by = 0.05)
+perc_A_teorico <- qnorm(percentiles, media_A, sd_A)
+perc_B_teorico <- qnorm(percentiles, media_B, sd_B)
+
+dev.new()
+plot(percentiles, perc_A_teorico, type = "l", col = "blue", lwd = 3,
+     main = "Comparación de Percentiles Teóricos",
+     xlab = "Percentil", ylab = "Puntuación",
+     ylim = range(c(perc_A_teorico, perc_B_teorico)))
+lines(percentiles, perc_B_teorico, col = "orange", lwd = 3)
+
+# Línea de referencia
+abline(h = media_B, col = "red", lwd = 1, lty = 2)
+abline(v = 0.90, col = "gray", lwd = 1, lty = 2)
+
+# Destacar diferencias en puntos clave
+puntos_clave <- c(0.10, 0.25, 0.50, 0.75, 0.90)
+for (p in puntos_clave) {
+  points(p, qnorm(p, media_A, sd_A), col = "blue", pch = 19, cex = 1.2)
+  points(p, qnorm(p, media_B, sd_B), col = "orange", pch = 19, cex = 1.2)
+  
+  diff <- qnorm(p, media_B, sd_B) - qnorm(p, media_A, sd_A)
+  text(p, (qnorm(p, media_A, sd_A) + qnorm(p, media_B, sd_B))/2,
+       paste("+", round(diff, 1)), pos = 4, cex = 0.8)
+}
+
+legend("topleft", 
+       legend = c("Grupo A", "Grupo B", "Media Grupo B", "Percentil 90"),
+       col = c("blue", "orange", "red", "gray"),
+       lwd = c(3, 3, 1, 1),
+       lty = c(1, 1, 2, 2),
+       pch = c(NA, NA, NA, NA))
+
+# RESUMEN FINAL
+cat("=== RESUMEN FINAL Y RECOMENDACIONES ===\n\n")
+cat("DIFERENCIAS PRINCIPALES ENTRE GRUPOS:\n")
+cat("1. Diferencia de medias:", round(media_B - media_A, 2), "puntos a favor del Grupo B\n")
+cat("2. El Grupo B es más homogéneo (SD:", sd_B, "vs", sd_A, "del Grupo A)\n")
+cat("3. Solo el", round(porcentaje_A_supera_B_teorico * 100, 1), 
+    "% del Grupo A supera la media del Grupo B\n")
+cat("4. El", round(prob_B_menor_70_teorica * 100, 1), 
+    "% del Grupo B obtiene menos de 70 puntos\n\n")
+
+cat("PUNTUACIONES DE CORTE PARA EL 10% SUPERIOR:\n")
+cat("• Grupo A:", round(percentil_90_A_teorico, 1), "puntos\n")
+cat("• Grupo B:", round(percentil_90_B_teorico, 1), "puntos\n")
+cat("• Diferencia:", round(percentil_90_B_teorico - percentil_90_A_teorico, 1), "puntos\n\n")
+
+cat("INTERPRETACIÓN EDUCATIVA:\n")
+cat("1. El Grupo B tiene un desempeño consistentemente superior\n")
+cat("2. La menor variabilidad del Grupo B sugiere enseñanza más uniforme\n")
+cat("3. Un umbral de 70 puntos es muy bajo para el Grupo B (solo ", 
+    round(prob_B_menor_70_teorica * 100, 1), "% bajo este umbral)\n", sep = "")
+cat("4. Para reconocer al 10% superior, se necesitan diferentes cortes por grupo\n\n")
+
+cat("RECOMENDACIONES PARA EVALUACIÓN:\n")
+cat("1. Considerar criterios de evaluación diferenciados por grupo\n")
+cat("2. El percentil 90 es un criterio más justo que puntuaciones absolutas\n")
+cat("3. Investigar causas de la mayor variabilidad en el Grupo A\n")
+cat("4. El Grupo A podría necesitar apoyo adicional\n")
+```
+
+
+:::
+
+
